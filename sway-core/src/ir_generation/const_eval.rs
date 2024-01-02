@@ -1098,22 +1098,6 @@ fn const_eval_intrinsic(
                 unreachable!("Type checker allowed non integer value for LessThan")
             }
         },
-        Intrinsic::AddrOf
-        | Intrinsic::PtrAdd
-        | Intrinsic::PtrSub
-        | Intrinsic::IsReferenceType
-        | Intrinsic::IsStrArray
-        | Intrinsic::Gtf
-        | Intrinsic::StateClear
-        | Intrinsic::StateLoadWord
-        | Intrinsic::StateStoreWord
-        | Intrinsic::StateLoadQuad
-        | Intrinsic::StateStoreQuad
-        | Intrinsic::Log
-        | Intrinsic::Revert
-        | Intrinsic::Smo => Err(ConstEvalError::CannotBeEvaluatedToConst {
-            span: intrinsic.span.clone(),
-        }),
         Intrinsic::Not => {
             // `not` works only with uint/u256/b256 at the moment
             // `bool` ops::Not implementation uses `__eq`.
@@ -1152,6 +1136,23 @@ fn const_eval_intrinsic(
                 }
             }
         }
+        Intrinsic::AddrOf
+        | Intrinsic::PtrAdd
+        | Intrinsic::PtrSub
+        | Intrinsic::IsReferenceType
+        | Intrinsic::IsStrArray
+        | Intrinsic::Gtf
+        | Intrinsic::StateClear
+        | Intrinsic::StateLoadWord
+        | Intrinsic::StateStoreWord
+        | Intrinsic::StateLoadQuad
+        | Intrinsic::StateStoreQuad
+        | Intrinsic::Log
+        | Intrinsic::Revert
+        | Intrinsic::Smo 
+        | Intrinsic::ContractCall => Err(ConstEvalError::CannotBeEvaluatedToConst {
+            span: intrinsic.span.clone(),
+        })
     }
 }
 

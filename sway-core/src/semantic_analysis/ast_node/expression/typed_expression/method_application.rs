@@ -5,7 +5,7 @@ use crate::{
     },
     language::{
         parsed::*,
-        ty::{self, TyDecl},
+        ty::{self, TyDecl, TyExpression},
         *,
     },
     namespace::TryInsertingTraitImplOnFailure,
@@ -15,6 +15,7 @@ use crate::{
 use ast_node::typed_expression::check_function_arguments_arity;
 use indexmap::IndexMap;
 use std::collections::VecDeque;
+use sway_ast::Intrinsic;
 use sway_error::{
     error::CompileError,
     handler::{ErrorEmitted, Handler},
@@ -32,6 +33,8 @@ pub(crate) fn type_check_method_application(
     arguments: Vec<Expression>,
     span: Span,
 ) -> Result<ty::TyExpression, ErrorEmitted> {
+    let aaaa = arguments.clone();
+
     let type_engine = ctx.engines.te();
     let decl_engine = ctx.engines.de();
     let engines = ctx.engines();
@@ -84,6 +87,7 @@ pub(crate) fn type_check_method_application(
     }
 
     // generate the map of the contract call params
+    let mut untyped_contract_call_params_map = IndexMap::new();
     let mut contract_call_params_map = IndexMap::new();
     if method.is_contract_call {
         for param_name in &[
@@ -109,6 +113,8 @@ pub(crate) fn type_check_method_application(
                 constants::CONTRACT_CALL_GAS_PARAMETER_NAME
                 | constants::CONTRACT_CALL_COINS_PARAMETER_NAME
                 | constants::CONTRACT_CALL_ASSET_ID_PARAMETER_NAME => {
+                    untyped_contract_call_params_map
+                        .insert(param.name.to_string(), param.value.clone());
                     let type_annotation = type_engine.insert(
                         engines,
                         if param.name.span().as_str()
@@ -337,12 +343,103 @@ pub(crate) fn type_check_method_application(
         is_method_call_syntax_used,
     )?;
 
+    let mut old_arguments = arguments;
     let arguments = method
         .parameters
         .iter()
         .map(|m| m.name.clone())
         .zip(args_buf.iter().cloned())
         .collect::<Vec<_>>();
+
+    if method.is_contract_call {
+        let gas_expr = untyped_contract_call_params_map
+            .remove(constants::CONTRACT_CALL_GAS_PARAMETER_NAME)
+            .unwrap_or_else(|| Expression {
+                kind: ExpressionKind::Literal(Literal::U64(u64::MAX)),
+                span: Span::dummy(),
+            });
+        let coins_expr = untyped_contract_call_params_map
+            .remove(constants::CONTRACT_CALL_COINS_PARAMETER_NAME)
+            .unwrap_or_else(|| Expression {
+                kind: ExpressionKind::Literal(Literal::U64(0)),
+                span: Span::dummy(),
+            });
+        let asset_id_expr = untyped_contract_call_params_map
+            .remove(constants::CONTRACT_CALL_ASSET_ID_PARAMETER_NAME)
+            .unwrap_or_else(|| Expression {
+                kind: ExpressionKind::Literal(Literal::B256([0u8; 32])),
+                span: Span::dummy(),
+            });
+
+        let mut tuple_elements = vec![Expression {
+            kind: ExpressionKind::Literal(Literal::String(method.name.span())),
+            span: Span::dummy(),
+        }];
+        tuple_elements.extend(old_arguments.into_iter().skip(1));
+
+        let arguments = vec![Expression {
+            kind: ExpressionKind::Tuple(tuple_elements),
+            span: Span::dummy(),
+        }];
+        let expr = Expression {
+            kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
+                call_path_binding: TypeBinding {
+                    inner: CallPath {
+                        prefixes: vec![],
+                        suffix: Ident::new_no_span("encode".into()),
+                        is_absolute: false,
+                    },
+                    type_arguments: TypeArgs::Regular(vec![]),
+                    span: span.clone(),
+                },
+                arguments,
+            })),
+            span: span.clone(),
+        };
+
+        let contract_call = Expression {
+            kind: ExpressionKind::IntrinsicFunction(IntrinsicFunctionExpression {
+                name: Ident::new_no_span("__contract_call".into()),
+                kind_binding: TypeBinding {
+                    inner: Intrinsic::ContractCall,
+                    type_arguments: TypeArgs::Regular(vec![TypeArgument {
+                        type_id: method.return_type.type_id,
+                        initial_type_id: method.return_type.type_id,
+                        span: Span::dummy(),
+                        call_path_tree: None,
+                    }]),
+                    span: Span::dummy(),
+                },
+                // __contract_call::<ReturnType>(params, coins, asset_id, gas)
+                arguments: vec![
+                    Expression {
+                        kind: ExpressionKind::MethodApplication(Box::new(
+                            MethodApplicationExpression {
+                                method_name_binding: TypeBinding {
+                                    inner: MethodName::FromModule {
+                                        method_name: Ident::new_no_span("ptr".into()),
+                                    },
+                                    type_arguments: TypeArgs::Regular(vec![]),
+                                    span: Span::dummy(),
+                                },
+                                contract_call_params: vec![],
+                                arguments: vec![expr],
+                            },
+                        )),
+                        span: Span::dummy(),
+                    },
+                    coins_expr,
+                    asset_id_expr,
+                    gas_expr,
+                ],
+            }),
+            span: Span::dummy(),
+        };
+
+        let expr = TyExpression::type_check(handler, ctx.by_ref(), contract_call);
+        assert!(expr.is_ok());
+        return expr;
+    }
 
     let mut fn_app = ty::TyExpressionVariant::FunctionApplication {
         call_path: call_path.clone(),

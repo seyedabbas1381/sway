@@ -1247,6 +1247,35 @@ impl<'eng> FnCompiler<'eng> {
                     .unary_op(UnaryOpKind::Not, value);
                 Ok(TerminatorValue::new(val, context))
             }
+            Intrinsic::ContractCall => {
+                let return_type = convert_resolved_typeid(
+                    engines.te(),
+                    engines.de(),
+                    context,
+                    &type_arguments[0].type_id,
+                    &type_arguments[0].span,
+                )?;
+
+                let params = self.compile_expression_to_value(context, md_mgr, &arguments[0])?;
+                let coins = self.compile_expression_to_value(context, md_mgr, &arguments[1])?;
+                let asset_id = self.compile_expression_to_value(context, md_mgr, &arguments[2])?;
+                let gas = self.compile_expression_to_value(context, md_mgr, &arguments[3])?;
+
+                let span_md_idx = md_mgr.span_to_md(context, &span);
+
+                Ok(self
+                    .current_block
+                    .append(context)
+                    .contract_call(
+                        return_type,
+                        "SOMETHING".into(),
+                        params,
+                        coins,
+                        asset_id,
+                        gas,
+                    )
+                    .add_metadatum(context, span_md_idx))
+            }
         }
     }
 

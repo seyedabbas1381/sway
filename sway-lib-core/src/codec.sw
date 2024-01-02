@@ -45,9 +45,13 @@ pub trait AbiEncode {
     fn abi_encode(self, ref mut buffer: Buffer);
 }
 
-impl AbiEncode for () {
-    fn abi_encode(self, ref mut _buffer: Buffer) {}
+impl AbiEncode for bool {
+    fn abi_encode(self, ref mut buffer: Buffer) {
+        buffer.push(self);
+    }
 }
+
+// Numbers
 
 impl AbiEncode for b256 {
     fn abi_encode(self, ref mut buffer: Buffer) {
@@ -58,12 +62,6 @@ impl AbiEncode for b256 {
         buffer.push(b);
         buffer.push(c);
         buffer.push(d);
-    }
-}
-
-impl AbiEncode for bool {
-    fn abi_encode(self, ref mut buffer: Buffer) {
-        buffer.push(self);
     }
 }
 
@@ -146,6 +144,8 @@ impl AbiEncode for u8 {
         buffer.push(self);
     }
 }
+
+// Strings
 
 impl AbiEncode for str {
     fn abi_encode(self, ref mut buffer: Buffer) {
@@ -271,7 +271,23 @@ impl AbiEncode for str[5] {
     }
 }
 
-// arrays and slices
+// Arrays and Slices
+
+pub fn encode<T>(item: T) -> raw_slice
+where
+    T: AbiEncode
+{
+    let mut buffer = Buffer::new();
+    item.abi_encode(buffer);
+    buffer.as_raw_slice()
+}
+
+impl<T> AbiEncode for [T; 0]
+where
+    T: AbiEncode,
+{
+    fn abi_encode(self, ref mut _buffer: Buffer) {}
+}
 
 impl<T> AbiEncode for [T; 1]
 where
@@ -330,6 +346,21 @@ where
 
 // Tuples
 
+impl AbiEncode for ()
+{
+    fn abi_encode(self, ref mut buffer: Buffer) {
+    }
+}
+
+impl<A> AbiEncode for (A,)
+where
+    A: AbiEncode
+{
+    fn abi_encode(self, ref mut buffer: Buffer) {
+        self.0.abi_encode(buffer);
+    }
+}
+
 impl<A, B> AbiEncode for (A, B)
 where
     A: AbiEncode,
@@ -386,13 +417,23 @@ where
     }
 }
 
-pub fn encode<T>(item: T) -> raw_slice
+impl<A, B, C, D, E, F> AbiEncode for (A, B, C, D, E, F)
 where
-    T: AbiEncode,
+    A: AbiEncode,
+    B: AbiEncode,
+    C: AbiEncode,
+    D: AbiEncode,
+    E: AbiEncode,
+    F: AbiEncode,
 {
-    let mut buffer = Buffer::new();
-    item.abi_encode(buffer);
-    buffer.as_raw_slice()
+    fn abi_encode(self, ref mut buffer: Buffer) {
+        self.0.abi_encode(buffer);
+        self.1.abi_encode(buffer);
+        self.2.abi_encode(buffer);
+        self.3.abi_encode(buffer);
+        self.4.abi_encode(buffer);
+        self.5.abi_encode(buffer);
+    }
 }
 
 fn assert_encoding<T, SLICE>(value: T, expected: SLICE)

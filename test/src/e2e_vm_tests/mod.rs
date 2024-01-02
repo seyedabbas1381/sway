@@ -256,6 +256,8 @@ impl TestContext {
                 .await;
                 *output = out;
 
+                dbg!(result.is_ok());
+                todo!();
                 let compiled = result?;
 
                 let compiled = match compiled {
@@ -428,6 +430,7 @@ impl TestContext {
                     output.push_str(&out);
                     contract_ids.push(result);
                 }
+
                 let contract_ids = contract_ids.into_iter().collect::<Result<Vec<_>, _>>()?;
                 let (result, out) =
                     harness::runs_on_node(&name, &context.run_config, &contract_ids).await;
@@ -579,6 +582,8 @@ pub async fn run(filter_config: &FilterConfig, run_config: &RunConfig) -> Result
         } else {
             context.run(test, &mut output, run_config.verbose).await
         };
+
+        dbg!(&result);
 
         if let Err(err) = result {
             println!(" {}", "failed".red().bold());

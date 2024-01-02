@@ -1,4 +1,4 @@
-category = "run_on_node"
+category = "compile"
 expected_result = { action = "result", value = 1 }
 contracts = ["should_pass/test_contracts/context_testing_contract"]
 unsupported_profiles = ["debug"]
