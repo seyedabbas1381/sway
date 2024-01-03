@@ -397,7 +397,10 @@ pub(crate) fn type_check_method_application(
             span: span.clone(),
         };
 
+        dbg!(ctx.engines.te().get(method.return_type.type_id));
+
         let contract_call = Expression {
+            // __contract_call::<ReturnType>(encode(("MethodName", ...old_arguments)).ptr(), coins, asset_id, gas)
             kind: ExpressionKind::IntrinsicFunction(IntrinsicFunctionExpression {
                 name: Ident::new_no_span("__contract_call".into()),
                 kind_binding: TypeBinding {
@@ -410,7 +413,6 @@ pub(crate) fn type_check_method_application(
                     }]),
                     span: Span::dummy(),
                 },
-                // __contract_call::<ReturnType>(params, coins, asset_id, gas)
                 arguments: vec![
                     Expression {
                         kind: ExpressionKind::MethodApplication(Box::new(
@@ -438,7 +440,9 @@ pub(crate) fn type_check_method_application(
 
         let expr = TyExpression::type_check(handler, ctx.by_ref(), contract_call);
         assert!(expr.is_ok());
-        return expr;
+        let expr = expr.unwrap();
+        dbg!(ctx.engines.te().get(expr.return_type));
+        return Ok(expr);
     }
 
     let mut fn_app = ty::TyExpressionVariant::FunctionApplication {

@@ -1418,6 +1418,7 @@ fn type_check_contract_call(
             call_path_tree: targ.call_path_tree.clone(),
         }
     }).unwrap();
+    let return_type = type_argument.type_id;
 
     // Arguments
 
@@ -1436,6 +1437,5 @@ fn type_check_contract_call(
         span,
     };
 
-    let return_type = type_engine.insert(engines, TypeInfo::Tuple(vec![]), None);
     Ok((intrinsic_function, return_type))
 }

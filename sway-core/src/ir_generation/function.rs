@@ -1255,6 +1255,9 @@ impl<'eng> FnCompiler<'eng> {
                     &type_arguments[0].type_id,
                     &type_arguments[0].span,
                 )?;
+                
+                dbg!(self.engines.help_out(type_arguments[0].type_id));
+                dbg!(&return_type.as_string(context));
 
                 let params = self.compile_expression_to_value(context, md_mgr, &arguments[0])?;
                 let coins = self.compile_expression_to_value(context, md_mgr, &arguments[1])?;
