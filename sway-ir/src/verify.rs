@@ -684,10 +684,15 @@ impl<'a, 'eng> InstructionVerifier<'a, 'eng> {
         // - The coins and gas must be u64s.
         // - The asset_id must be a B256
 
-        dbg!(params
+        // params needs to be u64 because it was a `raw ptr` when typed
+        let params_type = params.get_type(self.context);
+        if !params
             .get_type(self.context)
             .unwrap()
-            .as_string(self.context));
+            .is_uint64(self.context)
+        {
+            return Err(IrError::VerifyContractCallBadTypes("params".to_owned()));
+        }
 
         Ok(())
         // let fields = params
@@ -1022,7 +1027,10 @@ impl<'a, 'eng> InstructionVerifier<'a, 'eng> {
         let dst_ty = self.get_ptr_type(dst_val, IrError::VerifyStoreToNonPointer)?;
         let stored_ty = stored_val.get_type(self.context);
         if self.opt_ty_not_eq(&Some(dst_ty), &stored_ty) {
-            dbg!(dst_val.get_instruction(self.context), stored_val.get_instruction(self.context));
+            dbg!(
+                dst_val.get_instruction(self.context),
+                stored_val.get_instruction(self.context)
+            );
             Err(IrError::VerifyStoreMismatchedTypes)
         } else {
             Ok(())

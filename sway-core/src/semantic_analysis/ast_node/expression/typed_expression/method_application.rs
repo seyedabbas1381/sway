@@ -352,6 +352,87 @@ pub(crate) fn type_check_method_application(
         .collect::<Vec<_>>();
 
     if method.is_contract_call {
+        fn call_contract_call(
+            ctx: &mut TypeCheckContext,
+            return_type: TypeId,
+            method_name_expr: Expression,
+            arguments: Vec<Expression>,
+            typed_argumens: Vec<TypeId>,
+            coins_expr: Expression,
+            asset_id_expr: Expression,
+            gas_expr: Expression,
+        ) -> Expression {
+            let tuple_args_type_id = ctx.engines.te().insert(
+                ctx.engines,
+                TypeInfo::Tuple(
+                    typed_argumens
+                        .iter()
+                        .map(|&type_id| TypeArgument {
+                            type_id,
+                            initial_type_id: type_id,
+                            span: Span::dummy(),
+                            call_path_tree: None,
+                        })
+                        .collect(),
+                ),
+                None,
+            );
+            Expression {
+                kind: ExpressionKind::FunctionApplication(Box::new(
+                    FunctionApplicationExpression {
+                        call_path_binding: TypeBinding {
+                            inner: CallPath {
+                                prefixes: vec![],
+                                suffix: Ident::new_no_span("contract_call".into()),
+                                is_absolute: false,
+                            },
+                            type_arguments: TypeArgs::Regular(vec![
+                                TypeArgument {
+                                    type_id: return_type,
+                                    initial_type_id: return_type,
+                                    span: Span::dummy(),
+                                    call_path_tree: None,
+                                },
+                                TypeArgument {
+                                    type_id: tuple_args_type_id,
+                                    initial_type_id: tuple_args_type_id,
+                                    span: Span::dummy(),
+                                    call_path_tree: None,
+                                },
+                            ]),
+                            span: Span::dummy(),
+                        },
+                        arguments: vec![
+                            Expression {
+                                kind: ExpressionKind::Literal(Literal::B256([0u8; 32])),
+                                span: Span::dummy(),
+                            },
+                            method_name_expr,
+                            as_tuple(arguments),
+                            coins_expr,
+                            asset_id_expr,
+                            gas_expr,
+                        ],
+                    },
+                )),
+                span: Span::dummy(),
+            }
+        }
+
+        fn string_slice_literal(ident: &BaseIdent) -> Expression {
+            Expression {
+                kind: ExpressionKind::Literal(Literal::String(ident.span())),
+                span: ident.span(),
+            }
+        }
+
+        fn as_tuple(elements: Vec<Expression>) -> Expression {
+            Expression {
+                kind: ExpressionKind::Tuple(elements),
+                span: Span::dummy(),
+            }
+        }
+
         let gas_expr = untyped_contract_call_params_map
             .remove(constants::CONTRACT_CALL_GAS_PARAMETER_NAME)
             .unwrap_or_else(|| Expression {
@@ -371,77 +452,26 @@ pub(crate) fn type_check_method_application(
                 span: Span::dummy(),
             });
 
-        let mut tuple_elements = vec![Expression {
-            kind: ExpressionKind::Literal(Literal::String(method.name.span())),
-            span: Span::dummy(),
-        }];
-        tuple_elements.extend(old_arguments.into_iter().skip(1));
+        let contract_call = call_contract_call(
+            &mut ctx,
+            method.return_type.type_id,
+            string_slice_literal(&method.name),
+            old_arguments.into_iter().skip(1).collect(),
+            arguments.iter().map(|x| x.1.return_type).collect(),
+            coins_expr,
+            asset_id_expr,
+            gas_expr,
+        );
+        let mut expr = TyExpression::type_check(handler, ctx.by_ref(), contract_call)?;
 
-        let arguments = vec![Expression {
-            kind: ExpressionKind::Tuple(tuple_elements),
-            span: Span::dummy(),
-        }];
-        let expr = Expression {
-            kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
-                call_path_binding: TypeBinding {
-                    inner: CallPath {
-                        prefixes: vec![],
-                        suffix: Ident::new_no_span("encode".into()),
-                        is_absolute: false,
-                    },
-                    type_arguments: TypeArgs::Regular(vec![]),
-                    span: span.clone(),
-                },
-                arguments,
-            })),
-            span: span.clone(),
-        };
+        // We need to "fix" contract_id here because it was generated with zero
+        match &mut expr.expression {
+            ty::TyExpressionVariant::FunctionApplication { arguments, .. } => {
+                arguments[0].1 = (*selector.unwrap().contract_address).clone()
+            }
+            _ => unreachable!(),
+        }
 
-        dbg!(ctx.engines.te().get(method.return_type.type_id));
-
-        let contract_call = Expression {
-            // __contract_call::<ReturnType>(encode(("MethodName", ...old_arguments)).ptr(), coins, asset_id, gas)
-            kind: ExpressionKind::IntrinsicFunction(IntrinsicFunctionExpression {
-                name: Ident::new_no_span("__contract_call".into()),
-                kind_binding: TypeBinding {
-                    inner: Intrinsic::ContractCall,
-                    type_arguments: TypeArgs::Regular(vec![TypeArgument {
-                        type_id: method.return_type.type_id,
-                        initial_type_id: method.return_type.type_id,
-                        span: Span::dummy(),
-                        call_path_tree: None,
-                    }]),
-                    span: Span::dummy(),
-                },
-                arguments: vec![
-                    Expression {
-                        kind: ExpressionKind::MethodApplication(Box::new(
-                            MethodApplicationExpression {
-                                method_name_binding: TypeBinding {
-                                    inner: MethodName::FromModule {
-                                        method_name: Ident::new_no_span("ptr".into()),
-                                    },
-                                    type_arguments: TypeArgs::Regular(vec![]),
-                                    span: Span::dummy(),
-                                },
-                                contract_call_params: vec![],
-                                arguments: vec![expr],
-                            },
-                        )),
-                        span: Span::dummy(),
-                    },
-                    coins_expr,
-                    asset_id_expr,
-                    gas_expr,
-                ],
-            }),
-            span: Span::dummy(),
-        };
-
-        let expr = TyExpression::type_check(handler, ctx.by_ref(), contract_call);
-        assert!(expr.is_ok());
-        let expr = expr.unwrap();
-        dbg!(ctx.engines.te().get(expr.return_type));
         return Ok(expr);
     }
 

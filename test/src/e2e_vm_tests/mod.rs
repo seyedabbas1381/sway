@@ -583,8 +583,6 @@ pub async fn run(filter_config: &FilterConfig, run_config: &RunConfig) -> Result
             context.run(test, &mut output, run_config.verbose).await
         };
 
-        dbg!(&result);
-
         if let Err(err) = result {
             println!(" {}", "failed".red().bold());
             println!("{}", textwrap::indent(err.to_string().as_str(), "     "));

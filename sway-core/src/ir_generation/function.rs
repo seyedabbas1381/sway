@@ -1255,29 +1255,57 @@ impl<'eng> FnCompiler<'eng> {
                     &type_arguments[0].type_id,
                     &type_arguments[0].span,
                 )?;
-                
-                dbg!(self.engines.help_out(type_arguments[0].type_id));
-                dbg!(&return_type.as_string(context));
+
+                 // If the returned type is not copy type returns a pointer
+                let ret_is_copy_type = self
+                    .engines
+                    .te()
+                    .get_unaliased(type_arguments[0].type_id)
+                    .is_copy_type();
+                let return_type = if ret_is_copy_type {
+                    return_type
+                } else {
+                    Type::new_ptr(context, return_type)
+                };
 
                 let params = self.compile_expression_to_value(context, md_mgr, &arguments[0])?;
+                
                 let coins = self.compile_expression_to_value(context, md_mgr, &arguments[1])?;
+
+                // asset id
+                let b256_ty = Type::get_b256(context);
                 let asset_id = self.compile_expression_to_value(context, md_mgr, &arguments[2])?;
+                let tmp_asset_id_name = self.lexical_map.insert_anon();
+                let tmp_var = self
+                    .function
+                    .new_local_var(context, tmp_asset_id_name, b256_ty, None, false)
+                    .map_err(|ir_error| {
+                        CompileError::InternalOwned(ir_error.to_string(), Span::dummy())
+                    })?;
+                let tmp_val = self.current_block.append(context).get_local(tmp_var);
+                self.current_block
+                    .append(context)
+                    .store(tmp_val, asset_id);
+                let asset_id = self.current_block.append(context).get_local(tmp_var);
+
                 let gas = self.compile_expression_to_value(context, md_mgr, &arguments[3])?;
 
                 let span_md_idx = md_mgr.span_to_md(context, &span);
 
-                Ok(self
+                let returned_value = self
                     .current_block
                     .append(context)
-                    .contract_call(
-                        return_type,
-                        "SOMETHING".into(),
-                        params,
-                        coins,
-                        asset_id,
-                        gas,
-                    )
-                    .add_metadatum(context, span_md_idx))
+                    .contract_call(return_type, "SOMETHING".into(), params, coins, asset_id, gas)
+                    .add_metadatum(context, span_md_idx);
+
+                if return_type.is_ptr(context) {
+                    Ok(self.current_block
+                        .append(context)
+                        .load(returned_value)
+                        .add_metadatum(context, span_md_idx))
+                } else {
+                    Ok(returned_value)
+                }
             }
         }
     }

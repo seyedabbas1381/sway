@@ -1422,13 +1422,13 @@ fn type_check_contract_call(
 
     // Arguments
 
-    let arguments = arguments.iter().map(|x| {
+    let arguments: Vec<ty::TyExpression> = arguments.iter().map(|x| {
         let ctx = ctx
             .by_ref()
             .with_help_text("")
             .with_type_annotation(type_engine.insert(engines, TypeInfo::Unknown, None));
-        ty::TyExpression::type_check(handler, ctx, x.clone()).unwrap()
-    }).collect();
+        ty::TyExpression::type_check(handler, ctx, x.clone())
+    }).collect::<Result<Vec<_>, _>>()?;
 
     let intrinsic_function = ty::TyIntrinsicFunctionKind {
         kind,
