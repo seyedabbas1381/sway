@@ -79,7 +79,8 @@ fn compile_module_to_asm(
     // Pre-create labels for all functions before we generate other code, so we can call them
     // before compiling them if needed.
     for func in module.function_iter(context) {
-        builder.func_to_labels(&func);
+        let name = func.get_name(context);
+        dbg!(name, builder.func_to_labels(&func));
     }
 
     for function in module.function_iter(context) {

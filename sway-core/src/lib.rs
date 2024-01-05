@@ -814,6 +814,15 @@ pub(crate) fn compile_ast_to_ir_to_asm(
         .filter(|func| func.is_entry(&ir))
         .collect();
 
+        let a: Vec<_> = ir
+            .module_iter()
+            .flat_map(|module| module.function_iter(&ir))
+            .filter(|func| {
+                dbg!(func.get_name(&ir));
+                true
+            })
+            .collect();
+
     // Do a purity check on the _unoptimised_ IR.
     {
         let mut env = ir_generation::PurityEnv::default();

@@ -93,6 +93,10 @@ impl TyProgram {
                         mains.push(*decl_id);
                     }
 
+                    if dbg!(func.name.as_str()) == "__entry" {
+                        mains.push(*decl_id);
+                    }
+
                     if !fn_declarations.insert(func.name.clone()) {
                         handler.emit_err(CompileError::MultipleDefinitionsOfFunction {
                             name: func.name.clone(),
@@ -230,7 +234,9 @@ impl TyProgram {
                     }
                 }
 
-                TyProgramKind::Contract { abi_entries }
+                assert!(mains.len() == 1);
+
+                TyProgramKind::Contract { main_function:  mains[0], abi_entries }
             }
             parsed::TreeType::Library => {
                 if !configurables.is_empty() {
@@ -400,6 +406,17 @@ impl TyProgram {
             .chain(self.root.test_fns(decl_engine))
     }
 
+    /// All entry function declarations within the program.
+    pub fn entry_fns<'a: 'b, 'b>(
+        &'b self,
+        decl_engine: &'a DeclEngine,
+    ) -> impl '_ + Iterator<Item = (Arc<TyFunctionDecl>, DeclRefFunction)> {
+        self.root
+            .submodules_recursive()
+            .flat_map(|(_, submod)| submod.module.entry_fns(decl_engine))
+            .chain(self.root.entry_fns(decl_engine))
+    }
+
     pub fn check_deprecated(&self, engines: &Engines, handler: &Handler) {
         let mut allow_deprecated = AllowDeprecatedState::default();
         self.root
@@ -494,6 +511,7 @@ impl CollectTypesMetadata for TyProgram {
 #[derive(Clone, Debug)]
 pub enum TyProgramKind {
     Contract {
+        main_function: DeclId<TyFunctionDecl>,
         abi_entries: Vec<DeclId<TyFunctionDecl>>,
     },
     Library {

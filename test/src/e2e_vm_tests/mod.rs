@@ -424,7 +424,10 @@ impl TestContext {
                 let mut contract_ids = Vec::new();
                 for contract_path in contract_paths.clone() {
                     let (result, out) = run_and_capture_output(|| async {
-                        context.deploy_contract(contract_path).await
+                        dbg!(1);
+                        let r = context.deploy_contract(contract_path).await;
+                        dbg!(2);
+                        r
                     })
                     .await;
                     output.push_str(&out);

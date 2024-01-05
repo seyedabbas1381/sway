@@ -83,7 +83,9 @@ impl ty::TyIntrinsicFunctionKind {
             }
             Intrinsic::Smo => type_check_smo(handler, ctx, kind, arguments, type_arguments, span),
             Intrinsic::Not => type_check_not(handler, ctx, kind, arguments, type_arguments, span),
-            Intrinsic::ContractCall => type_check_contract_call(handler, ctx, kind, arguments, type_arguments, span),
+            Intrinsic::ContractCall => {
+                type_check_contract_call(handler, ctx, kind, arguments, type_arguments, span)
+            }
         }
     }
 }
@@ -1369,8 +1371,6 @@ fn type_check_smo(
     ))
 }
 
-
-
 /// Signature: `__contract_call<T>()`
 /// Description: Calls another contract
 /// Constraints: None.
@@ -1394,41 +1394,53 @@ fn type_check_contract_call(
     // }
 
     // Return Type
-    let type_argument = type_arguments.get(0).map(|targ| {
-        let mut ctx =
-            ctx.by_ref().with_type_annotation(type_engine.insert(engines, TypeInfo::Unknown, None));
-        let initial_type_info = type_engine
-            .to_typeinfo(targ.type_id, &targ.span)
-            .map_err(|e| handler.emit_err(e.into()))
-            .unwrap_or_else(TypeInfo::ErrorRecovery);
-        let initial_type_id = type_engine.insert(engines, initial_type_info, targ.span.source_id());
-        let type_id = ctx
-            .resolve_type(
-                handler,
-                initial_type_id,
-                &targ.span,
-                EnforceTypeArguments::Yes,
+    let type_argument = type_arguments
+        .get(0)
+        .map(|targ| {
+            let mut ctx = ctx.by_ref().with_type_annotation(type_engine.insert(
+                engines,
+                TypeInfo::Unknown,
                 None,
-            )
-            .unwrap_or_else(|err| type_engine.insert(engines, TypeInfo::ErrorRecovery(err), None));
-        TypeArgument {
-            type_id,
-            initial_type_id,
-            span: span.clone(),
-            call_path_tree: targ.call_path_tree.clone(),
-        }
-    }).unwrap();
+            ));
+            let initial_type_info = type_engine
+                .to_typeinfo(targ.type_id, &targ.span)
+                .map_err(|e| handler.emit_err(e.into()))
+                .unwrap_or_else(TypeInfo::ErrorRecovery);
+            let initial_type_id =
+                type_engine.insert(engines, initial_type_info, targ.span.source_id());
+            let type_id = ctx
+                .resolve_type(
+                    handler,
+                    initial_type_id,
+                    &targ.span,
+                    EnforceTypeArguments::Yes,
+                    None,
+                )
+                .unwrap_or_else(|err| {
+                    type_engine.insert(engines, TypeInfo::ErrorRecovery(err), None)
+                });
+            TypeArgument {
+                type_id,
+                initial_type_id,
+                span: span.clone(),
+                call_path_tree: targ.call_path_tree.clone(),
+            }
+        })
+        .unwrap();
     let return_type = type_argument.type_id;
 
     // Arguments
 
-    let arguments: Vec<ty::TyExpression> = arguments.iter().map(|x| {
-        let ctx = ctx
-            .by_ref()
-            .with_help_text("")
-            .with_type_annotation(type_engine.insert(engines, TypeInfo::Unknown, None));
-        ty::TyExpression::type_check(handler, ctx, x.clone())
-    }).collect::<Result<Vec<_>, _>>()?;
+    let arguments: Vec<ty::TyExpression> = arguments
+        .iter()
+        .map(|x| {
+            let ctx = ctx
+                .by_ref()
+                .with_help_text("")
+                .with_type_annotation(type_engine.insert(engines, TypeInfo::Unknown, None));
+            ty::TyExpression::type_check(handler, ctx, x.clone())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     let intrinsic_function = ty::TyIntrinsicFunctionKind {
         kind,

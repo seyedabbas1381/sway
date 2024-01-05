@@ -1149,10 +1149,10 @@ fn const_eval_intrinsic(
         | Intrinsic::StateStoreQuad
         | Intrinsic::Log
         | Intrinsic::Revert
-        | Intrinsic::Smo 
+        | Intrinsic::Smo
         | Intrinsic::ContractCall => Err(ConstEvalError::CannotBeEvaluatedToConst {
             span: intrinsic.span.clone(),
-        })
+        }),
     }
 }
 

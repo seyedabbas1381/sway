@@ -72,6 +72,31 @@ impl TyModule {
         })
     }
 
+     /// All entry functions within this module.
+     pub fn entry_fns<'a: 'b, 'b>(
+        &'b self,
+        decl_engine: &'a DeclEngine,
+    ) -> impl '_ + Iterator<Item = (Arc<TyFunctionDecl>, DeclRefFunction)> {
+        self.all_nodes.iter().filter_map(|node| {
+            if let TyAstNodeContent::Declaration(TyDecl::FunctionDecl(FunctionDecl {
+                decl_id,
+                subst_list: _,
+                name,
+                decl_span,
+            })) = &node.content
+            {
+                let fn_decl = decl_engine.get_function(decl_id);
+                if fn_decl.is_entry() {
+                    return Some((
+                        fn_decl,
+                        DeclRef::new(name.clone(), *decl_id, decl_span.clone()),
+                    ));
+                }
+            }
+            None
+        })
+    }
+
     pub(crate) fn check_deprecated(
         &self,
         engines: &Engines,

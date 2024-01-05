@@ -15,6 +15,7 @@ use crate::{
 use ast_node::typed_expression::check_function_arguments_arity;
 use indexmap::IndexMap;
 use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use sway_ast::Intrinsic;
 use sway_error::{
     error::CompileError,

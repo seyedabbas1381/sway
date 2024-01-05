@@ -2,7 +2,7 @@ use crate::{
     decl_engine::{DeclId, DeclRefFunction},
     language::{ty, Visibility},
     metadata::MetadataManager,
-    semantic_analysis::namespace,
+    semantic_analysis::{namespace, TypeCheckContext},
     type_system::TypeId,
     types::{LogId, MessageId},
     Engines,
@@ -117,6 +117,7 @@ pub(super) fn compile_predicate(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn compile_contract(
     context: &mut Context,
+    main_function: &DeclId<ty::TyFunctionDecl>,
     abi_entries: &[DeclId<ty::TyFunctionDecl>],
     namespace: &namespace::Module,
     declarations: &[ty::TyDecl],
@@ -138,6 +139,21 @@ pub(super) fn compile_contract(
         declarations,
     )
     .map_err(|err| vec![err])?;
+
+    compile_entry_function(
+        engines,
+        context,
+        &mut md_mgr,
+        module,
+        main_function,
+        &HashMap::new(),
+        &HashMap::new(),
+        None,
+    )?;
+
+    let names: Vec<_> = declarations.iter().map(|x| x.friendly_name(engines)).collect();
+    dbg!(names);
+
     for decl in abi_entries {
         compile_abi_method(
             context,
@@ -149,6 +165,7 @@ pub(super) fn compile_contract(
             engines,
         )?;
     }
+
     compile_tests(
         engines,
         context,

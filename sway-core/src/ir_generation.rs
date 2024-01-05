@@ -83,8 +83,9 @@ pub fn compile_program<'eng>(
             &messages_types,
             &test_fns,
         ),
-        ty::TyProgramKind::Contract { abi_entries } => compile::compile_contract(
+        ty::TyProgramKind::Contract { main_function, abi_entries } => compile::compile_contract(
             &mut ctx,
+            main_function,
             abi_entries,
             root.namespace.module(),
             declarations,
@@ -104,7 +105,7 @@ pub fn compile_program<'eng>(
         ),
     }?;
 
-    //println!("{ctx}");
+    println!("{ctx}");
 
     ctx.verify().map_err(|ir_error: sway_ir::IrError| {
         vec![CompileError::InternalOwned(
