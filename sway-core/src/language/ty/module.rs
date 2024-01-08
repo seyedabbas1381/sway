@@ -72,8 +72,8 @@ impl TyModule {
         })
     }
 
-     /// All entry functions within this module.
-     pub fn entry_fns<'a: 'b, 'b>(
+    /// All entry functions within this module.
+    pub fn entry_fns<'a: 'b, 'b>(
         &'b self,
         decl_engine: &'a DeclEngine,
     ) -> impl '_ + Iterator<Item = (Arc<TyFunctionDecl>, DeclRefFunction)> {

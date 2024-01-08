@@ -83,7 +83,10 @@ pub fn compile_program<'eng>(
             &messages_types,
             &test_fns,
         ),
-        ty::TyProgramKind::Contract { main_function, abi_entries } => compile::compile_contract(
+        ty::TyProgramKind::Contract {
+            main_function,
+            abi_entries,
+        } => compile::compile_contract(
             &mut ctx,
             main_function,
             abi_entries,

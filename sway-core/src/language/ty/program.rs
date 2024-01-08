@@ -93,7 +93,7 @@ impl TyProgram {
                         mains.push(*decl_id);
                     }
 
-                    if dbg!(func.name.as_str()) == "__entry" {
+                    if func.name.as_str() == "__entry" {
                         mains.push(*decl_id);
                     }
 
@@ -236,7 +236,10 @@ impl TyProgram {
 
                 assert!(mains.len() == 1);
 
-                TyProgramKind::Contract { main_function:  mains[0], abi_entries }
+                TyProgramKind::Contract {
+                    main_function: mains[0],
+                    abi_entries,
+                }
             }
             parsed::TreeType::Library => {
                 if !configurables.is_empty() {

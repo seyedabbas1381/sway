@@ -151,7 +151,10 @@ pub(super) fn compile_contract(
         None,
     )?;
 
-    let names: Vec<_> = declarations.iter().map(|x| x.friendly_name(engines)).collect();
+    let names: Vec<_> = declarations
+        .iter()
+        .map(|x| x.friendly_name(engines))
+        .collect();
     dbg!(names);
 
     for decl in abi_entries {

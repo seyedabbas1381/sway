@@ -156,6 +156,13 @@ impl AbstractProgram {
     fn build_contract_abi_switch(&mut self, asm_buf: &mut AllocatedAbstractInstructionSet) {
         // jump to method selector
 
+        let entry = self.entries.iter().find(|x| x.name == "__entry").unwrap();
+        asm_buf.ops.push(AllocatedAbstractOp {
+            opcode: Either::Right(ControlFlowOp::Jump(entry.label)),
+            comment: "jump to abi method selector".into(),
+            owning_span: None,
+        });
+        
         // asm_buf.ops.push(AllocatedAbstractOp {
         //     // If the comparison result is _not_ equal to 0, then it was indeed equal.
         //     opcode: Either::Right(ControlFlowOp::Jump(

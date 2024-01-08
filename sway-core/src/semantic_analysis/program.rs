@@ -51,22 +51,7 @@ impl TyProgram {
         let modules_dep_graph = ty::TyModule::analyze(handler, root)?;
         let module_eval_order = modules_dep_graph.compute_order(handler)?;
 
-        dbg!(1);
-        let mut m = ty::TyModule::type_check(handler, ctx.by_ref(), root, module_eval_order)
-            .and_then(|root| {
-                let res = Self::validate_root(handler, engines, &root, kind.clone(), package_name);
-                res.map(|(kind, declarations, configurables)| Self {
-                    kind,
-                    root,
-                    declarations,
-                    configurables,
-                    storage_slots: vec![],
-                    logged_types: vec![],
-                    messages_types: vec![],
-                })
-            })?;
-
-        dbg!(1);
+        let mut root = ty::TyModule::type_check(handler, ctx.by_ref(), root, module_eval_order)?;
 
         if matches!(
             dbg!(&parsed.kind),
@@ -148,7 +133,7 @@ impl TyProgram {
                 span: Span::dummy(),
             };
 
-            for (fn_decl, _) in m.entry_fns(engines.de()) {
+            for (fn_decl, _) in root.entry_fns(engines.de()) {
                 contents.push(AstNode {
                     content: AstNodeContent::Expression(Expression {
                         kind: ExpressionKind::If(IfExpression {
@@ -207,7 +192,7 @@ impl TyProgram {
             };
 
             dbg!("__entry");
-            m.root.all_nodes.push(TyAstNode::type_check(
+            root.all_nodes.push(TyAstNode::type_check(
                 handler,
                 ctx,
                 AstNode {
@@ -227,9 +212,18 @@ impl TyProgram {
             // );
         }
 
-        dbg!(1);
+        let (kind, declarations, configurables) =
+            Self::validate_root(handler, engines, &root, kind.clone(), package_name)?;
 
-        Ok(m)
+        Ok(Self {
+            kind,
+            root,
+            declarations,
+            configurables,
+            storage_slots: vec![],
+            logged_types: vec![],
+            messages_types: vec![],
+        })
     }
 
     pub(crate) fn get_typed_program_with_initialized_storage_slots(
