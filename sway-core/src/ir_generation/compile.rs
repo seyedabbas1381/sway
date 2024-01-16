@@ -155,7 +155,6 @@ pub(super) fn compile_contract(
         .iter()
         .map(|x| x.friendly_name(engines))
         .collect();
-    dbg!(names);
 
     for decl in abi_entries {
         compile_abi_method(

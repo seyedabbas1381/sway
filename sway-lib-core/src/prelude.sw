@@ -13,11 +13,10 @@ use ::storage::*;
 use ::str::*;
 use ::codec::*;
 
-pub fn decode_first_param<T>() -> T {
-    let v = asm(size: __size_of::<T>(), ptr) {
-        aloc size;
-        move ptr hp;
-        ptr: T
-    };
-    v
+pub fn decode_first_param<T>() -> T 
+where
+    T: AbiDecode
+{
+    let mut buffer = BufferReader::from_first_parameter();
+    T::abi_decode(buffer)
 }

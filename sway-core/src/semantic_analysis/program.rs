@@ -15,7 +15,7 @@ use crate::{
         TypeCheckContext,
     },
     transform::AttributesMap,
-    BuildConfig, Engines, TypeArgs, TypeArgument, TypeBinding, TypeInfo,
+    BuildConfig, Engines, TypeArgs, TypeArgument, TypeBinding, TypeInfo, decl_engine::{self, DeclEngineGet},
 };
 use sway_ast::Intrinsic;
 use sway_error::handler::{ErrorEmitted, Handler};
@@ -133,7 +133,18 @@ impl TyProgram {
                 span: Span::dummy(),
             };
 
-            for (fn_decl, _) in root.entry_fns(engines.de()) {
+            dbg!("contract calls: {}");
+            let all_entries: Vec<_> = root
+                .submodules_recursive()
+                .flat_map(|(_, submod)| {
+                    submod.module.entry_fns(engines.de(), kind.clone())
+                })
+                .chain(root.entry_fns(engines.de(), kind.clone()))
+                .collect();
+            dbg!(all_entries.len());
+            for r in all_entries {
+                let decl = engines.de().get(r.id());
+                dbg!(&decl.name);
                 contents.push(AstNode {
                     content: AstNodeContent::Expression(Expression {
                         kind: ExpressionKind::If(IfExpression {
@@ -143,22 +154,23 @@ impl TyProgram {
                                 method_name_var_ref.clone(),
                                 Expression {
                                     kind: ExpressionKind::Literal(Literal::String(
-                                        fn_decl.name.span(),
+                                        decl.name.span(),
                                     )),
                                     span: Span::dummy(),
                                 },
                             )),
                             then: Box::new(Expression {
-                                kind: ExpressionKind::IntrinsicFunction(
-                                    IntrinsicFunctionExpression {
-                                        name: Ident::new_no_span("__log".to_string()),
-                                        kind_binding: TypeBinding {
-                                            inner: Intrinsic::Log,
-                                            type_arguments: TypeArgs::Regular(vec![]),
-                                            span: Span::dummy(),
-                                        },
-                                        arguments: vec![method_name_var_ref.clone()],
-                                    },
+                                kind: ExpressionKind::FunctionApplication(
+                                    Box::new(
+                                        FunctionApplicationExpression { 
+                                            call_path_binding: TypeBinding { 
+                                                inner: decl.call_path.clone(), 
+                                                type_arguments: TypeArgs::Regular(vec![]), 
+                                                span: Span::dummy(),
+                                            }, 
+                                            arguments: vec![]
+                                        }
+                                    )
                                 ),
                                 span: Span::dummy(),
                             }),
@@ -215,7 +227,7 @@ impl TyProgram {
         let (kind, declarations, configurables) =
             Self::validate_root(handler, engines, &root, kind.clone(), package_name)?;
 
-        Ok(Self {
+        let program = Self {
             kind,
             root,
             declarations,
@@ -223,7 +235,9 @@ impl TyProgram {
             storage_slots: vec![],
             logged_types: vec![],
             messages_types: vec![],
-        })
+        };
+
+        Ok(program)
     }
 
     pub(crate) fn get_typed_program_with_initialized_storage_slots(

@@ -154,113 +154,12 @@ impl AbstractProgram {
     /// See https://fuellabs.github.io/fuel-specs/master/vm#call-frames which
     /// describes the first argument to be at word offset 73.
     fn build_contract_abi_switch(&mut self, asm_buf: &mut AllocatedAbstractInstructionSet) {
-        // jump to method selector
-
         let entry = self.entries.iter().find(|x| x.name == "__entry").unwrap();
         asm_buf.ops.push(AllocatedAbstractOp {
             opcode: Either::Right(ControlFlowOp::Jump(entry.label)),
             comment: "jump to abi method selector".into(),
             owning_span: None,
         });
-        
-        // asm_buf.ops.push(AllocatedAbstractOp {
-        //     // If the comparison result is _not_ equal to 0, then it was indeed equal.
-        //     opcode: Either::Right(ControlFlowOp::Jump(
-        //         Label {
-
-        //         }
-        //     )),
-        //     comment: "jump to selected function".into(),
-        //     owning_span: None,
-        // });
-
-        // const SELECTOR_WORD_OFFSET: u64 = 73;
-        // const INPUT_SELECTOR_REG: AllocatedRegister = AllocatedRegister::Allocated(0);
-        // const PROG_SELECTOR_REG: AllocatedRegister = AllocatedRegister::Allocated(1);
-        // const CMP_RESULT_REG: AllocatedRegister = AllocatedRegister::Allocated(2);
-
-        // // Build the switch statement for selectors.
-        // asm_buf.ops.push(AllocatedAbstractOp {
-        //     opcode: Either::Right(ControlFlowOp::Comment),
-        //     comment: "Begin contract ABI selector switch".into(),
-        //     owning_span: None,
-        // });
-
-        // // Load the selector from the call frame.
-        // asm_buf.ops.push(AllocatedAbstractOp {
-        //     opcode: Either::Left(AllocatedOpcode::LW(
-        //         INPUT_SELECTOR_REG,
-        //         AllocatedRegister::Constant(ConstantRegister::FramePointer),
-        //         VirtualImmediate12::new_unchecked(
-        //             SELECTOR_WORD_OFFSET,
-        //             "constant infallible value",
-        //         ),
-        //     )),
-        //     comment: "load input function selector".into(),
-        //     owning_span: None,
-        // });
-
-        // // Add a 'case' for each entry with a selector.
-        // for entry in &self.entries {
-        //     let selector = match entry.selector {
-        //         Some(sel) => sel,
-        //         // Skip entries that don't have a selector - they're probably tests.
-        //         None => continue,
-        //     };
-
-        //     // Put the selector in the data section.
-        //     let data_label = self.data_section.insert_data_value(Entry::new_word(
-        //         u32::from_be_bytes(selector) as u64,
-        //         None,
-        //         None,
-        //     ));
-
-        //     // Load the data into a register for comparison.
-        //     asm_buf.ops.push(AllocatedAbstractOp {
-        //         opcode: Either::Left(AllocatedOpcode::LoadDataId(PROG_SELECTOR_REG, data_label)),
-        //         comment: format!("load fn selector for comparison {}", entry.name),
-        //         owning_span: None,
-        //     });
-
-        //     // Compare with the input selector.
-        //     asm_buf.ops.push(AllocatedAbstractOp {
-        //         opcode: Either::Left(AllocatedOpcode::EQ(
-        //             CMP_RESULT_REG,
-        //             INPUT_SELECTOR_REG,
-        //             PROG_SELECTOR_REG,
-        //         )),
-        //         comment: "function selector comparison".into(),
-        //         owning_span: None,
-        //     });
-
-        //     // Jump to the function label if the selector was equal.
-        //     asm_buf.ops.push(AllocatedAbstractOp {
-        //         // If the comparison result is _not_ equal to 0, then it was indeed equal.
-        //         opcode: Either::Right(ControlFlowOp::JumpIfNotZero(CMP_RESULT_REG, entry.label)),
-        //         comment: "jump to selected function".into(),
-        //         owning_span: None,
-        //     });
-        // }
-
-        // // If none of the selectors matched, then revert.  This may change in the future, see
-        // // https://github.com/FuelLabs/sway/issues/444
-        // asm_buf.ops.push(AllocatedAbstractOp {
-        //     opcode: Either::Left(AllocatedOpcode::MOVI(
-        //         AllocatedRegister::Constant(ConstantRegister::Scratch),
-        //         VirtualImmediate18 {
-        //             value: compiler_constants::MISMATCHED_SELECTOR_REVERT_CODE,
-        //         },
-        //     )),
-        //     comment: "special code for mismatched selector".into(),
-        //     owning_span: None,
-        // });
-        // asm_buf.ops.push(AllocatedAbstractOp {
-        //     opcode: Either::Left(AllocatedOpcode::RVRT(AllocatedRegister::Constant(
-        //         ConstantRegister::Scratch,
-        //     ))),
-        //     comment: "revert if no selectors matched".into(),
-        //     owning_span: None,
-        // });
     }
 }
 

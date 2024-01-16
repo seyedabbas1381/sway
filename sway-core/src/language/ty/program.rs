@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     decl_engine::*,
     fuel_prelude::fuel_tx::StorageSlot,
-    language::{parsed, ty::*, Purity},
+    language::{parsed::{self, TreeType}, ty::*, Purity},
     transform::AllowDeprecatedState,
     type_system::*,
     types::*,
@@ -413,11 +413,12 @@ impl TyProgram {
     pub fn entry_fns<'a: 'b, 'b>(
         &'b self,
         decl_engine: &'a DeclEngine,
-    ) -> impl '_ + Iterator<Item = (Arc<TyFunctionDecl>, DeclRefFunction)> {
+        tree_type: TreeType,
+    ) -> impl '_ + Iterator<Item = DeclRefFunction> {
         self.root
             .submodules_recursive()
-            .flat_map(|(_, submod)| submod.module.entry_fns(decl_engine))
-            .chain(self.root.entry_fns(decl_engine))
+            .flat_map(move |(_, submod)| submod.module.entry_fns(decl_engine, tree_type.clone()))
+            .chain(self.root.entry_fns(decl_engine, tree_type.clone()))
     }
 
     pub fn check_deprecated(&self, engines: &Engines, handler: &Handler) {

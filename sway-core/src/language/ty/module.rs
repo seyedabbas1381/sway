@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use sway_error::handler::{ErrorEmitted, Handler};
-use sway_types::Span;
+use sway_types::{Span, Named};
 
 use crate::{
-    decl_engine::{DeclEngine, DeclRef, DeclRefFunction},
+    decl_engine::{DeclEngine, DeclRef, DeclRefFunction, DeclEngineGet},
     language::ModName,
-    language::{ty::*, HasModule, HasSubmodules},
+    language::{ty::*, HasModule, HasSubmodules, parsed::TreeType},
     semantic_analysis::namespace,
     transform::{self, AllowDeprecatedState},
     Engines,
@@ -72,28 +72,21 @@ impl TyModule {
         })
     }
 
-    /// All entry functions within this module.
+    /// All entry points within this module.
     pub fn entry_fns<'a: 'b, 'b>(
         &'b self,
         decl_engine: &'a DeclEngine,
-    ) -> impl '_ + Iterator<Item = (Arc<TyFunctionDecl>, DeclRefFunction)> {
-        self.all_nodes.iter().filter_map(|node| {
-            if let TyAstNodeContent::Declaration(TyDecl::FunctionDecl(FunctionDecl {
-                decl_id,
-                subst_list: _,
-                name,
-                decl_span,
-            })) = &node.content
-            {
-                let fn_decl = decl_engine.get_function(decl_id);
-                if fn_decl.is_entry() {
-                    return Some((
-                        fn_decl,
-                        DeclRef::new(name.clone(), *decl_id, decl_span.clone()),
-                    ));
+        tree_type: TreeType,
+    ) -> impl '_ + Iterator<Item = DeclRefFunction> {
+        self.all_nodes.iter().filter_map(move |node| {
+            if node.is_entry_point(decl_engine, &tree_type) {
+                match &node.content {
+                    TyAstNodeContent::Declaration(decl) => decl.get_fun_decl_ref(),
+                    _ => todo!(),
                 }
+            } else {
+                None
             }
-            None
         })
     }
 
