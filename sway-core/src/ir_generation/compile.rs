@@ -146,8 +146,8 @@ pub(super) fn compile_contract(
         &mut md_mgr,
         module,
         main_function,
-        &HashMap::new(),
-        &HashMap::new(),
+        logged_types_map,
+        messages_types_map,
         None,
     )?;
 

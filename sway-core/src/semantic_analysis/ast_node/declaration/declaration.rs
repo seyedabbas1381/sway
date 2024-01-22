@@ -1,17 +1,17 @@
 use sway_error::handler::{ErrorEmitted, Handler};
-use sway_types::{Named, Spanned};
+use sway_types::{Named, Spanned, Ident};
 
 use crate::{
-    decl_engine::{DeclEngineInsert, DeclRef, ReplaceFunctionImplementingType},
+    decl_engine::{DeclEngineInsert, DeclRef, ReplaceFunctionImplementingType, DeclEngineGet, Template},
     language::{
         parsed,
-        ty::{self, TyDecl},
+        ty::{self, TyDecl, FunctionDecl},
         CallPath,
     },
     namespace::{IsExtendingExistingImpl, IsImplSelf},
     semantic_analysis::{
         type_check_context::EnforceTypeArguments, TypeCheckAnalysis, TypeCheckAnalysisContext,
-        TypeCheckContext, TypeCheckFinalization, TypeCheckFinalizationContext,
+        TypeCheckContext, TypeCheckFinalization, TypeCheckFinalizationContext, ConstShadowingMode, GenericShadowingMode,
     },
     type_system::*,
 };
@@ -183,6 +183,7 @@ impl TyDecl {
                         Ok(res) => res,
                         Err(err) => return Ok(ty::TyDecl::ErrorRecovery(span, err)),
                     };
+
                 // if this ImplTrait implements a trait and not an ABI,
                 // we insert its methods into the context
                 // otherwise, if it implements an ABI, we do not
@@ -198,8 +199,31 @@ impl TyDecl {
                     ) {
                     &impl_trait.items
                 } else {
+                    for i in &impl_trait.items {
+                        match i {
+                            ty::TyTraitItem::Fn(f) => {
+                                let decl = engines.de().get(f.id());
+                                ctx.namespace.insert_symbol(
+                                    handler, 
+                                    Ident::new_no_span(format!("__contract_entry_{}", decl.name.clone())), 
+                                    TyDecl::FunctionDecl(FunctionDecl {
+                                        name: decl.name.clone(),
+                                        decl_id: f.id().clone(),
+                                        subst_list: Template::default(),
+                                        decl_span: f.span(),
+                                    }), 
+                                    ConstShadowingMode::ItemStyle, 
+                                    GenericShadowingMode::Allow
+                                );
+                            },
+                            _ => {},
+                        }
+                    }
+
                     &emp_vec
                 };
+
+                
 
                 ctx.insert_trait_implementation(
                     handler,

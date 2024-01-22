@@ -20,3 +20,18 @@ where
     let mut buffer = BufferReader::from_first_parameter();
     T::abi_decode(buffer)
 }
+
+pub fn decode_second_param<T>() -> T 
+where
+    T: AbiDecode
+{
+    let mut _buffer = BufferReader::from_second_parameter();
+
+    let s = __size_of::<T>();
+    let v = asm(s: s) {
+        aloc s;
+        hp: T 
+    };
+    //T::abi_decode(buffer)
+    v
+}

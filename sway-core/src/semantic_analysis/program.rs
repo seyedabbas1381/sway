@@ -4,7 +4,7 @@ use crate::{
             AsmExpression, AsmRegisterDeclaration, AstNode, AstNodeContent, CodeBlock, Declaration,
             Expression, ExpressionKind, FunctionApplicationExpression, FunctionDeclaration,
             IfExpression, IntrinsicFunctionExpression, MatchBranch, MatchExpression, ParseProgram,
-            Scrutinee, VariableDeclaration,
+            Scrutinee, VariableDeclaration, MethodApplicationExpression, MethodName, SubfieldExpression, TupleIndexExpression,
         },
         ty::{self, TyAstNode, TyDecl, TyFunctionDecl, TyProgram},
         AsmOp, AsmRegister, CallPath, Literal, Purity,
@@ -20,7 +20,7 @@ use crate::{
 use sway_ast::Intrinsic;
 use sway_error::handler::{ErrorEmitted, Handler};
 use sway_ir::{Context, Module};
-use sway_types::{integer_bits::IntegerBits, Ident, Span, Spanned};
+use sway_types::{integer_bits::IntegerBits, Ident, Span, Spanned, BaseIdent};
 
 use super::{
     TypeCheckAnalysis, TypeCheckAnalysisContext, TypeCheckFinalization,
@@ -49,17 +49,11 @@ impl TyProgram {
 
         // Analyze the dependency order for the submodules.
         let modules_dep_graph = ty::TyModule::analyze(handler, root)?;
-        let module_eval_order = modules_dep_graph.compute_order(handler)?;
+        let module_eval_order: Vec<sway_types::BaseIdent> = modules_dep_graph.compute_order(handler)?;
 
         let mut root = ty::TyModule::type_check(handler, ctx.by_ref(), root, module_eval_order)?;
 
-        if matches!(
-            dbg!(&parsed.kind),
-            crate::language::parsed::TreeType::Contract
-        ) {
-            // /// Where 73 is the current offset in words from the start of the call frame.
-            // const FIRST_PARAMETER_OFFSET: u64 = 73;
-            // frame_ptr().add::<u64>(FIRST_PARAMETER_OFFSET).read()
+        if matches!(&parsed.kind, crate::language::parsed::TreeType::Contract) {
             fn call_decode_first_param(engines: &Engines) -> Expression {
                 let string_slice_type_id =
                     engines.te().insert(engines, TypeInfo::StringSlice, None);
@@ -87,25 +81,118 @@ impl TyProgram {
                 }
             }
 
-            fn call_eq(engines: &Engines, l: Expression, r: Expression) -> Expression {
-                let string_slice_type_id = engines.te().insert(engines, TypeInfo::Boolean, None);
+            fn call_decode_second_param(engines: &Engines, args_type: TypeArgument) -> Expression {
                 Expression {
                     kind: ExpressionKind::FunctionApplication(Box::new(
                         FunctionApplicationExpression {
                             call_path_binding: TypeBinding {
                                 inner: CallPath {
                                     prefixes: vec![],
-                                    suffix: Ident::new_no_span("eq".into()),
+                                    suffix: Ident::new_no_span("decode_second_param".into()),
                                     is_absolute: false,
                                 },
-                                type_arguments: TypeArgs::Regular(vec![]),
+                                type_arguments: TypeArgs::Regular(vec![args_type]),
                                 span: Span::dummy(),
                             },
-                            arguments: vec![l, r],
+                            arguments: vec![],
                         },
                     )),
                     span: Span::dummy(),
                 }
+            }
+
+            fn call_eq(engines: &Engines, l: Expression, r: Expression) -> Expression {
+                let string_slice_type_id = engines.te().insert(engines, TypeInfo::Boolean, None);
+                Expression {
+                    kind: ExpressionKind::MethodApplication(
+                        Box::new(
+                            MethodApplicationExpression {
+                                method_name_binding: TypeBinding { 
+                                    inner: MethodName::FromModule { 
+                                        method_name: Ident::new_no_span("eq".to_string())
+                                    }, 
+                                    type_arguments: TypeArgs::Regular(vec![]), 
+                                    span: Span::dummy()
+                                },
+                                contract_call_params: vec![],
+                                arguments: vec![l, r]
+                            }
+                        )
+                    ),
+                    span: Span::dummy(),
+                }
+            }
+
+            fn arguments_type(engines: &Engines, decl: &TyFunctionDecl) -> Option<TypeArgument> {
+                if decl.parameters.is_empty() {
+                    return None;
+                }
+
+                // if decl.parameters.len() == 1 {
+                //     return Some(decl.parameters[0].type_argument.clone());
+                // }
+
+                let types = decl.parameters.iter().map(|p| {
+                    let arg_t = engines.te().get(p.type_argument.type_id);
+                    let arg_t = match &*arg_t {
+                        TypeInfo::Unknown => todo!(),
+                        TypeInfo::UnknownGeneric { name, trait_constraints } => todo!(),
+                        TypeInfo::Placeholder(_) => todo!(),
+                        TypeInfo::TypeParam(_) => todo!(),
+                        TypeInfo::StringSlice => todo!(),
+                        TypeInfo::StringArray(_) => todo!(),
+                        TypeInfo::UnsignedInteger(v) => TypeInfo::UnsignedInteger(*v),
+                        TypeInfo::Enum(_) => todo!(),
+                        TypeInfo::Struct(s) => TypeInfo::Struct(s.clone()),
+                        TypeInfo::Boolean => todo!(),
+                        TypeInfo::Tuple(_) => todo!(),
+                        TypeInfo::ContractCaller { abi_name, address } => todo!(),
+                        TypeInfo::Custom { qualified_call_path, type_arguments, root_type_id } => todo!(),
+                        TypeInfo::B256 => TypeInfo::B256,
+                        TypeInfo::Numeric => todo!(),
+                        TypeInfo::Contract => todo!(),
+                        TypeInfo::ErrorRecovery(_) => todo!(),
+                        TypeInfo::Array(_, _) => todo!(),
+                        TypeInfo::Storage { fields } => todo!(),
+                        TypeInfo::RawUntypedPtr => todo!(),
+                        TypeInfo::RawUntypedSlice => todo!(),
+                        TypeInfo::Ptr(_) => todo!(),
+                        TypeInfo::Slice(_) => todo!(),
+                        TypeInfo::Alias { name, ty } => todo!(),
+                        TypeInfo::TraitType { name, trait_type_id } => todo!(),
+                        TypeInfo::Ref(_) => todo!(),
+                    };
+                    let tid = engines.te().insert(engines, arg_t, None);
+                    TypeArgument {
+                        type_id: tid,
+                        initial_type_id: tid,
+                        span: Span::dummy(),
+                        call_path_tree: None,
+                    }
+                }).collect();
+                let type_id = engines.te().insert(engines, TypeInfo::Tuple(types), None);
+                Some(TypeArgument { 
+                    type_id: type_id.clone(), 
+                    initial_type_id: type_id, 
+                    span: Span::dummy(), 
+                    call_path_tree: None
+                })
+            }
+
+            fn arguments_as_expressions(name: BaseIdent, decl: &TyFunctionDecl) -> Vec<Expression> {
+                decl.parameters.iter().enumerate().map(|(idx, p)| {
+                    Expression {
+                        kind: ExpressionKind::TupleIndex(TupleIndexExpression {
+                            prefix: Box::new(Expression {
+                                kind: ExpressionKind::AmbiguousVariableExpression(name.clone()),
+                                span: Span::dummy(),
+                            }),
+                            index: idx,
+                            index_span: Span::dummy(),
+                        }),
+                        span: Span::dummy(),
+                    }
+                }).collect()
             }
 
             let unit_type_id = engines.te().insert(engines, TypeInfo::Tuple(vec![]), None);
@@ -133,18 +220,36 @@ impl TyProgram {
                 span: Span::dummy(),
             };
 
-            dbg!("contract calls: {}");
+            fn import_core_ops(ctx: &mut TypeCheckContext<'_>) -> bool {
+                // Check if the compilation context has acces to the
+                // core library.
+                let handler = Handler::default();
+                let _ = ctx.star_import(
+                    &handler,
+                    &[
+                        Ident::new_no_span("core".into()),
+                        Ident::new_no_span("ops".into()),
+                    ],
+                    true,
+                );
+        
+                !handler.has_errors()
+            }
+
+            assert!(import_core_ops(&mut ctx));
+
             let all_entries: Vec<_> = root
                 .submodules_recursive()
                 .flat_map(|(_, submod)| {
-                    submod.module.entry_fns(engines.de(), kind.clone())
+                    submod.module.contract_fns(engines)
                 })
-                .chain(root.entry_fns(engines.de(), kind.clone()))
+                .chain(root.contract_fns(engines))
                 .collect();
-            dbg!(all_entries.len());
             for r in all_entries {
                 let decl = engines.de().get(r.id());
-                dbg!(&decl.name);
+                let args_type = arguments_type(engines, &decl);
+                let args_tuple_name = Ident::new_no_span("args".to_string());
+
                 contents.push(AstNode {
                     content: AstNodeContent::Expression(Expression {
                         kind: ExpressionKind::If(IfExpression {
@@ -159,21 +264,77 @@ impl TyProgram {
                                     span: Span::dummy(),
                                 },
                             )),
-                            then: Box::new(Expression {
-                                kind: ExpressionKind::FunctionApplication(
-                                    Box::new(
-                                        FunctionApplicationExpression { 
-                                            call_path_binding: TypeBinding { 
-                                                inner: decl.call_path.clone(), 
-                                                type_arguments: TypeArgs::Regular(vec![]), 
-                                                span: Span::dummy(),
-                                            }, 
-                                            arguments: vec![]
-                                        }
-                                    )
-                                ),
-                                span: Span::dummy(),
-                            }),
+                            then: Box::new(
+                                Expression::code_block({
+                                    let mut nodes = vec![];
+                                    match args_type {
+                                        Some(args_type) => {
+                                            // decode parameters
+                                            nodes.push(AstNode {
+                                                content: AstNodeContent::Declaration(
+                                                    Declaration::VariableDeclaration(VariableDeclaration { 
+                                                        name: args_tuple_name.clone(), 
+                                                        type_ascription: args_type.clone(), 
+                                                        body: call_decode_second_param(engines, args_type), 
+                                                        is_mutable: false
+                                                    })
+                                                ),
+                                                span: Span::dummy()
+                                            });
+                                            // call the contract method
+                                            nodes.push(AstNode {
+                                                content: AstNodeContent::Expression(Expression {
+                                                        kind: ExpressionKind::FunctionApplication(
+                                                            Box::new(
+                                                                FunctionApplicationExpression { 
+                                                                    call_path_binding: TypeBinding { 
+                                                                        inner: CallPath {
+                                                                            prefixes: vec![],
+                                                                            suffix: Ident::new_no_span(format!("__contract_entry_{}", decl.call_path.suffix.clone())),
+                                                                            is_absolute: false 
+                                                                        }, 
+                                                                        type_arguments: TypeArgs::Regular(vec![]), 
+                                                                        span: Span::dummy(),
+                                                                    },
+                                                                    arguments: arguments_as_expressions(args_tuple_name.clone(), &decl)
+                                                                }
+                                                            )
+                                                        ),
+                                                        span: Span::dummy(),
+                                                }),
+                                                span: Span::dummy()
+                                            });
+                                        },
+                                        None => {
+                                             // call the contract method
+                                             nodes.push(AstNode {
+                                                content: AstNodeContent::Expression(Expression {
+                                                        kind: ExpressionKind::FunctionApplication(
+                                                            Box::new(
+                                                                FunctionApplicationExpression { 
+                                                                    call_path_binding: TypeBinding { 
+                                                                        inner: CallPath {
+                                                                            prefixes: vec![],
+                                                                            suffix: Ident::new_no_span(format!("__contract_entry_{}", decl.call_path.suffix.clone())),
+                                                                            is_absolute: false 
+                                                                        }, 
+                                                                        type_arguments: TypeArgs::Regular(vec![]), 
+                                                                        span: Span::dummy(),
+                                                                    },
+                                                                    arguments: vec![]
+                                                                }
+                                                            )
+                                                        ),
+                                                        span: Span::dummy(),
+                                                }),
+                                                span: Span::dummy()
+                                            });
+                                        },
+                                    }
+
+                                    nodes
+                                })
+                            ),
                             r#else: None,
                         }),
                         span: Span::dummy(),
@@ -203,31 +364,20 @@ impl TyProgram {
                 where_clause: vec![],
             };
 
-            dbg!("__entry");
             root.all_nodes.push(TyAstNode::type_check(
                 handler,
                 ctx,
                 AstNode {
-                    content: AstNodeContent::Declaration(Declaration::FunctionDeclaration(
-                        entry_fn_decl,
-                    )),
+                    content: AstNodeContent::Declaration(Declaration::FunctionDeclaration(entry_fn_decl)),
                     span: Span::dummy(),
                 },
             )?);
-
-            // m.declarations.push(
-            //     TyDecl::type_check(
-            //         handler,
-            //         ctx,
-            //         Declaration::FunctionDeclaration(entry_fn_decl)
-            //     )?
-            // );
         }
 
         let (kind, declarations, configurables) =
             Self::validate_root(handler, engines, &root, kind.clone(), package_name)?;
 
-        let program = Self {
+        let program = TyProgram {
             kind,
             root,
             declarations,

@@ -1015,6 +1015,14 @@ impl<'eng> FnCompiler<'eng> {
                     .expect("Could not return logged type.");
                 let log_id = match self.logged_types_map.get(&logged_type) {
                     None => {
+                        dbg!(&self.logged_types_map);
+                        dbg!(&i.arguments);
+                        dbg!(self.engines.help_out(&i));
+                        dbg!(&span);
+                        todo!("{:?}", CompileError::Internal(
+                            "Unable to determine ID for log instance.",
+                            span,
+                        ));
                         return Err(CompileError::Internal(
                             "Unable to determine ID for log instance.",
                             span,

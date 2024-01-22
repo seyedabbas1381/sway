@@ -108,7 +108,7 @@ pub fn compile_program<'eng>(
         ),
     }?;
 
-    println!("{ctx}");
+    //println!("{ctx}");
 
     ctx.verify().map_err(|ir_error: sway_ir::IrError| {
         vec![CompileError::InternalOwned(

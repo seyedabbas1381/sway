@@ -61,6 +61,20 @@ impl BufferReader {
         }
     }
 
+    pub fn from_second_parameter() -> BufferReader {
+        const SECOND_PARAMETER_OFFSET: u64 = 74;
+
+        let ptr = asm() {
+            fp: raw_ptr
+        };
+        let ptr = ptr.add::<u64>(SECOND_PARAMETER_OFFSET);
+
+        BufferReader {
+            ptr,
+            pos: 0,
+        }
+    }
+
     pub fn read_bytes(ref mut self, count: u64) -> raw_slice {
         let next_pos = self.pos + count;
 
@@ -516,6 +530,15 @@ impl AbiDecode for u64 {
     }
 }
 
+impl AbiDecode for b256 {
+    fn abi_decode(ref mut buffer: BufferReader) -> b256 {
+        let bytes = buffer.read_bytes(32);
+        asm(bytes: bytes) {
+            bytes: b256
+        }
+    }
+}
+
 impl AbiDecode for str {
     fn abi_decode(ref mut buffer: BufferReader) -> str {
         let len = u64::abi_decode(buffer);
@@ -526,6 +549,35 @@ impl AbiDecode for str {
         }
     }
 }
+
+impl AbiDecode for () {
+    fn abi_decode(ref mut _buffer: BufferReader) -> () {
+        ()
+    }
+}
+
+impl<A> AbiDecode for (A,) 
+where
+    A: AbiDecode 
+{
+    fn abi_decode(ref mut buffer: BufferReader) -> (A,) {
+        let a = A::abi_decode(buffer);
+        (a,)
+    }
+}
+
+impl<A, B> AbiDecode for (A, B) 
+where
+    A: AbiDecode,
+    B: AbiDecode,
+{
+    fn abi_decode(ref mut buffer: BufferReader) -> (A, B) {
+        let a = A::abi_decode(buffer);
+        let b = B::abi_decode(buffer);
+        (a, b)
+    }
+}
+
 
 #[test]
 fn ok_encode() {

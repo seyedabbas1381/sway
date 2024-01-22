@@ -29,6 +29,18 @@ pub struct Expression {
     pub span: Span,
 }
 
+impl Expression {
+    pub fn code_block(nodes: impl IntoIterator<Item = parsed::AstNode>) -> Self {
+        Expression {
+            kind: ExpressionKind::CodeBlock(CodeBlock {
+                contents: nodes.into_iter().collect(),
+                whole_block_span: Span::dummy(),
+            }),
+            span: Span::dummy(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FunctionApplicationExpression {
     pub call_path_binding: TypeBinding<CallPath>,

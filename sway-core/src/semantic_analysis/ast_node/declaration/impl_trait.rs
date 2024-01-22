@@ -54,10 +54,87 @@ impl TyImplTrait {
         ctx.by_ref()
             .with_const_shadowing_mode(ConstShadowingMode::ItemStyle)
             .with_self_type(Some(self_type_id))
-            .allow_functions()
-            .scoped(&mut impl_namespace, |mut ctx| {
-                // Type check the type parameters
-                let new_impl_type_parameters = TypeParameter::type_check_type_params(
+            .allow_functions();
+
+        // Type check the type parameters
+        let new_impl_type_parameters = TypeParameter::type_check_type_params(
+            handler,
+            ctx.by_ref(),
+            impl_type_parameters,
+            Some(self_type_param),
+        )?;
+
+        // resolve the types of the trait type arguments
+        for type_arg in trait_type_arguments.iter_mut() {
+            type_arg.type_id = ctx.resolve_type(
+                handler,
+                type_arg.type_id,
+                &type_arg.span,
+                EnforceTypeArguments::Yes,
+                None,
+            )?;
+        }
+
+        // type check the type that we are implementing for
+        implementing_for.type_id = ctx.resolve_type(
+            handler,
+            implementing_for.type_id,
+            &implementing_for.span,
+            EnforceTypeArguments::Yes,
+            None,
+        )?;
+
+        // check to see if this type is supported in impl blocks
+        type_engine
+            .get(implementing_for.type_id)
+            .expect_is_supported_in_impl_blocks_self(handler, &implementing_for.span)?;
+
+        // check for unconstrained type parameters
+        check_for_unconstrained_type_parameters(
+            handler,
+            engines,
+            &new_impl_type_parameters,
+            &trait_type_arguments,
+            implementing_for.type_id,
+        )?;
+
+        // Unify the "self" type param and the type that we are implementing for
+        handler.scope(|h| {
+            type_engine.unify_with_self(
+                h,
+                engines,
+                implementing_for.type_id,
+                self_type_id,
+                &implementing_for.span,
+                "",
+                None,
+            );
+            Ok(())
+        })?;
+
+        // Update the context
+        let mut ctx = ctx
+            .with_help_text("")
+            .with_type_annotation(type_engine.insert(engines, TypeInfo::Unknown, None))
+            .with_self_type(Some(implementing_for.type_id));
+
+        let impl_trait = match ctx
+            .namespace
+            .resolve_call_path(handler, engines, &trait_name, ctx.self_type())
+            .ok()
+        {
+            Some(ty::TyDecl::TraitDecl(ty::TraitDecl { decl_id, .. })) => {
+                let mut trait_decl = (*decl_engine.get_trait(&decl_id)).clone();
+
+                // the following essentially is needed to map `Self` to `implementing_for`
+                // during trait decl monomorphization
+                trait_decl
+                    .type_parameters
+                    .push(trait_decl.self_type.clone());
+                trait_type_arguments.push(implementing_for.clone());
+
+                // monomorphize the trait declaration
+                ctx.monomorphize(
                     handler,
                     ctx.by_ref(),
                     impl_type_parameters,
@@ -127,152 +204,45 @@ impl TyImplTrait {
                     Some(ty::TyDecl::TraitDecl(ty::TraitDecl { decl_id, .. })) => {
                         let mut trait_decl = (*decl_engine.get_trait(&decl_id)).clone();
 
-                        // the following essentially is needed to map `Self` to `implementing_for`
-                        // during trait decl monomorphization
-                        trait_decl
-                            .type_parameters
-                            .push(trait_decl.self_type.clone());
-                        trait_type_arguments.push(implementing_for.clone());
-
-                        // monomorphize the trait declaration
-                        ctx.monomorphize(
-                            handler,
-                            &mut trait_decl,
-                            &mut trait_type_arguments,
-                            EnforceTypeArguments::Yes,
-                            &trait_name.span(),
-                        )?;
-
-                        // restore type parameters and type arguments
-                        trait_decl.type_parameters.pop();
-                        trait_type_arguments.pop();
-
-                        // Insert the interface surface and methods from this trait into
-                        // the namespace.
-                        trait_decl.insert_interface_surface_and_items_into_namespace(
-                            handler,
-                            ctx.by_ref(),
-                            &trait_name,
-                            &trait_type_arguments,
-                            implementing_for.type_id,
-                        );
-
-                        let new_items = type_check_trait_implementation(
-                            handler,
-                            ctx.by_ref(),
-                            implementing_for.type_id,
-                            &new_impl_type_parameters,
-                            &trait_decl.type_parameters,
-                            &trait_type_arguments,
-                            &trait_decl.supertraits,
-                            &trait_decl.interface_surface,
-                            &trait_decl.items,
-                            &items,
-                            &trait_name,
-                            &trait_decl.span(),
-                            &block_span,
-                            false,
-                        )?;
-                        ty::TyImplTrait {
-                            impl_type_parameters: new_impl_type_parameters,
-                            trait_name: trait_name.clone(),
-                            trait_type_arguments,
-                            trait_decl_ref: Some(DeclRef::new(
-                                trait_decl.name.clone(),
-                                decl_id.into(),
-                                trait_decl.span.clone(),
-                            )),
-                            span: block_span,
-                            items: new_items,
-                            implementing_for,
-                        }
-                    }
-                    Some(ty::TyDecl::AbiDecl(ty::AbiDecl { decl_id, .. })) => {
-                        // if you are comparing this with the `impl_trait` branch above, note that
-                        // there are no type arguments here because we don't support generic types
-                        // in contract ABIs yet (or ever?) due to the complexity of communicating
-                        // the ABI layout in the descriptor file.
-
-                        let abi = decl_engine.get_abi(&decl_id);
-
-                        if !type_engine
-                            .get(implementing_for.type_id)
-                            .eq(&TypeInfo::Contract, engines)
-                        {
-                            handler.emit_err(CompileError::ImplAbiForNonContract {
-                                span: implementing_for.span(),
-                                ty: engines.help_out(implementing_for.type_id).to_string(),
-                            });
-                        }
-
-                        let self_type_param =
-                            TypeParameter::new_self_type(engines, abi.span.clone());
-                        // Unify the "self" type param from the abi declaration with
-                        // the type that we are implementing for.
-                        handler.scope(|h| {
-                            type_engine.unify_with_self(
-                                h,
-                                engines,
-                                implementing_for.type_id,
-                                self_type_param.type_id,
-                                &implementing_for.span,
-                                "",
-                                None,
-                            );
-                            Ok(())
-                        })?;
-
-                        let mut ctx = ctx.with_abi_mode(AbiMode::ImplAbiFn(abi.name.clone(), None));
-
-                        // Insert the interface surface and methods from this trait into
-                        // the namespace.
-                        let _ = abi.insert_interface_surface_and_items_into_namespace(
-                            handler,
-                            decl_id,
-                            ctx.by_ref(),
-                            implementing_for.type_id,
-                            None,
-                        );
-
-                        let new_items = type_check_trait_implementation(
-                            handler,
-                            ctx.by_ref(),
-                            implementing_for.type_id,
-                            &[], // this is empty because abi definitions don't support generics,
-                            &[], // this is empty because abi definitions don't support generics,
-                            &[], // this is empty because abi definitions don't support generics,
-                            &abi.supertraits,
-                            &abi.interface_surface,
-                            &abi.items,
-                            &items,
-                            &trait_name,
-                            &abi.span(),
-                            &block_span,
-                            true,
-                        )?;
-                        ty::TyImplTrait {
-                            impl_type_parameters: vec![], // this is empty because abi definitions don't support generics
-                            trait_name,
-                            trait_type_arguments: vec![], // this is empty because abi definitions don't support generics
-                            trait_decl_ref: Some(DeclRef::new(
-                                abi.name.clone(),
-                                decl_id.into(),
-                                abi.span.clone(),
-                            )),
-                            span: block_span,
-                            items: new_items,
-                            implementing_for,
-                        }
-                    }
-                    Some(_) | None => {
-                        return Err(handler.emit_err(CompileError::UnknownTrait {
-                            name: trait_name.suffix.clone(),
-                            span: trait_name.span(),
-                        }));
-                    }
-                };
-                Ok(impl_trait)
-            })
+                let new_items = type_check_trait_implementation(
+                    handler,
+                    ctx.by_ref(),
+                    implementing_for.type_id,
+                    &[], // this is empty because abi definitions don't support generics,
+                    &[], // this is empty because abi definitions don't support generics,
+                    &[], // this is empty because abi definitions don't support generics,
+                    &abi.supertraits,
+                    &abi.interface_surface,
+                    &abi.items,
+                    &items,
+                    &trait_name,
+                    &abi.span(),
+                    &block_span,
+                    true,
+                )?;
+                
+                ty::TyImplTrait {
+                    impl_type_parameters: vec![], // this is empty because abi definitions don't support generics
+                    trait_name,
+                    trait_type_arguments: vec![], // this is empty because abi definitions don't support generics
+                    trait_decl_ref: Some(DeclRef::new(
+                        abi.name.clone(),
+                        decl_id.into(),
+                        abi.span.clone(),
+                    )),
+                    span: block_span,
+                    items: new_items,
+                    implementing_for,
+                }
+            }
+            Some(_) | None => {
+                return Err(handler.emit_err(CompileError::UnknownTrait {
+                    name: trait_name.suffix.clone(),
+                    span: trait_name.span(),
+                }));
+            }
+        };
+        Ok(impl_trait)
     }
 
     pub(crate) fn type_check_impl_self(

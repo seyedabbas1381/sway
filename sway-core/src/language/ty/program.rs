@@ -409,17 +409,17 @@ impl TyProgram {
             .chain(self.root.test_fns(decl_engine))
     }
 
-    /// All entry function declarations within the program.
-    pub fn entry_fns<'a: 'b, 'b>(
-        &'b self,
-        decl_engine: &'a DeclEngine,
-        tree_type: TreeType,
-    ) -> impl '_ + Iterator<Item = DeclRefFunction> {
-        self.root
-            .submodules_recursive()
-            .flat_map(move |(_, submod)| submod.module.entry_fns(decl_engine, tree_type.clone()))
-            .chain(self.root.entry_fns(decl_engine, tree_type.clone()))
-    }
+    // /// All entry function declarations within the program.
+    // pub fn entry_fns<'a: 'b, 'b>(
+    //     &'b self,
+    //     decl_engine: &'a DeclEngine,
+    //     tree_type: TreeType,
+    // ) -> impl '_ + Iterator<Item = DeclRefFunction> {
+    //     self.root
+    //         .submodules_recursive()
+    //         .flat_map(move |(_, submod)| submod.module.entry_fns(decl_engine, tree_type.clone()))
+    //         .chain(self.root.entry_fns(decl_engine, tree_type.clone()))
+    // }
 
     pub fn check_deprecated(&self, engines: &Engines, handler: &Handler) {
         let mut allow_deprecated = AllowDeprecatedState::default();
@@ -457,7 +457,10 @@ impl CollectTypesMetadata for TyProgram {
             }
             // For contracts, collect metadata for all the types starting with each ABI method as
             // an entry point.
-            TyProgramKind::Contract { abi_entries, .. } => {
+            TyProgramKind::Contract { abi_entries, main_function } => {
+                let entry = decl_engine.get_function(main_function);
+                metadata.append(&mut entry.collect_types_metadata(handler, ctx)?);
+
                 for entry in abi_entries.iter() {
                     let entry = decl_engine.get_function(entry);
                     metadata.append(&mut entry.collect_types_metadata(handler, ctx)?);

@@ -257,7 +257,6 @@ impl TestContext {
                 *output = out;
 
                 dbg!(result.is_ok());
-                todo!();
                 let compiled = result?;
 
                 let compiled = match compiled {

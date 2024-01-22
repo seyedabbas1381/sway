@@ -72,21 +72,26 @@ impl TyModule {
         })
     }
 
-    /// All entry points within this module.
-    pub fn entry_fns<'a: 'b, 'b>(
+    /// All contract functions within this module.
+    pub fn contract_fns<'a: 'b, 'b>(
         &'b self,
-        decl_engine: &'a DeclEngine,
-        tree_type: TreeType,
+        engines: &'a Engines,
     ) -> impl '_ + Iterator<Item = DeclRefFunction> {
-        self.all_nodes.iter().filter_map(move |node| {
-            if node.is_entry_point(decl_engine, &tree_type) {
-                match &node.content {
-                    TyAstNodeContent::Declaration(decl) => decl.get_fun_decl_ref(),
-                    _ => todo!(),
+        self.all_nodes.iter().flat_map(move |node| {
+            let mut fns = vec![];
+
+            if let TyAstNodeContent::Declaration(TyDecl::ImplTrait(decl)) = &node.content {
+                let decl = engines.de().get(&decl.decl_id);
+                if decl.is_impl_contract(engines.te()) {
+                    for item in &decl.items {
+                        if let TyTraitItem::Fn(f) = item {
+                            fns.push(f.clone());
+                        }
+                    }
                 }
-            } else {
-                None
             }
+
+            fns
         })
     }
 
