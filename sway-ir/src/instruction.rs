@@ -194,6 +194,10 @@ pub enum FuelVmInstruction {
         arg1: Value,
         arg2: Value,
     },
+    Retd {
+        ptr: Value,
+        len: Value
+    }
 }
 
 /// Comparison operations.
@@ -276,6 +280,7 @@ impl InstOp {
             InstOp::FuelVm(FuelVmInstruction::Log { .. }) => Some(Type::get_unit(context)),
             InstOp::FuelVm(FuelVmInstruction::ReadRegister(_)) => Some(Type::get_uint64(context)),
             InstOp::FuelVm(FuelVmInstruction::Smo { .. }) => Some(Type::get_unit(context)),
+            InstOp::FuelVm(FuelVmInstruction::Retd { .. }) => None,
 
             // Load needs to strip the pointer from the source type.
             InstOp::Load(ptr_val) => match &context.values[ptr_val.0].value {
@@ -444,6 +449,9 @@ impl InstOp {
                     arg3,
                     ..
                 } => vec![*result, *arg1, *arg2, *arg3],
+                FuelVmInstruction::Retd { ptr, len } => {
+                    vec![*ptr, *len]
+                }
             },
         }
     }
@@ -614,6 +622,10 @@ impl InstOp {
                     replace(arg2);
                     replace(arg3);
                 }
+                FuelVmInstruction::Retd { ptr, len } => {
+                    replace(ptr);
+                    replace(len);
+                }
             },
         }
     }
@@ -630,6 +642,7 @@ impl InstOp {
             | InstOp::FuelVm(FuelVmInstruction::StateStoreQuadWord { .. })
             | InstOp::FuelVm(FuelVmInstruction::StateStoreWord { .. })
             | InstOp::FuelVm(FuelVmInstruction::Revert(..))
+            | InstOp::FuelVm(FuelVmInstruction::Retd{ .. })
             | InstOp::MemCopyBytes { .. }
             | InstOp::MemCopyVal { .. }
             | InstOp::Store { .. }
@@ -1058,6 +1071,10 @@ impl<'a, 'eng> InstructionInserter<'a, 'eng> {
 
     pub fn ret(self, value: Value, ty: Type) -> Value {
         insert_instruction!(self, InstOp::Ret(value, ty))
+    }
+
+    pub fn retd(self, ptr: Value, len: Value) -> Value {
+        insert_instruction!(self, InstOp::FuelVm(FuelVmInstruction::Retd { ptr, len }))
     }
 
     pub fn revert(self, value: Value) -> Value {

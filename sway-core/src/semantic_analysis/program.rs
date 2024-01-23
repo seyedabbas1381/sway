@@ -54,6 +54,26 @@ impl TyProgram {
         let mut root = ty::TyModule::type_check(handler, ctx.by_ref(), root, module_eval_order)?;
 
         if matches!(&parsed.kind, crate::language::parsed::TreeType::Contract) {
+            fn call_encode(engines: &Engines, arg: Expression) -> Expression {
+                Expression {
+                    kind: ExpressionKind::FunctionApplication(Box::new(
+                        FunctionApplicationExpression {
+                            call_path_binding: TypeBinding {
+                                inner: CallPath {
+                                    prefixes: vec![],
+                                    suffix: Ident::new_no_span("encode".into()),
+                                    is_absolute: false,
+                                },
+                                type_arguments: TypeArgs::Regular(vec![]),
+                                span: Span::dummy(),
+                            },
+                            arguments: vec![arg],
+                        },
+                    )),
+                    span: Span::dummy(),
+                }
+            }
+
             fn call_decode_first_param(engines: &Engines) -> Expression {
                 let string_slice_type_id =
                     engines.te().insert(engines, TypeInfo::StringSlice, None);
@@ -248,7 +268,9 @@ impl TyProgram {
             for r in all_entries {
                 let decl = engines.de().get(r.id());
                 let args_type = arguments_type(engines, &decl);
+                let result_type = decl.return_type.clone();
                 let args_tuple_name = Ident::new_no_span("args".to_string());
+                let result_name = Ident::new_no_span("result".to_string());
 
                 contents.push(AstNode {
                     content: AstNodeContent::Expression(Expression {
@@ -270,40 +292,58 @@ impl TyProgram {
                                     match args_type {
                                         Some(args_type) => {
                                             // decode parameters
-                                            nodes.push(AstNode {
-                                                content: AstNodeContent::Declaration(
-                                                    Declaration::VariableDeclaration(VariableDeclaration { 
-                                                        name: args_tuple_name.clone(), 
-                                                        type_ascription: args_type.clone(), 
-                                                        body: call_decode_second_param(engines, args_type), 
-                                                        is_mutable: false
-                                                    })
-                                                ),
-                                                span: Span::dummy()
-                                            });
+                                            nodes.push(AstNode::variable_declaration(
+                                                args_tuple_name.clone(),
+                                                args_type.clone(),
+                                                call_decode_second_param(engines, args_type),
+                                                false
+                                            ));
                                             // call the contract method
-                                            nodes.push(AstNode {
+                                            nodes.push(AstNode::variable_declaration(
+                                                result_name.clone(),
+                                                result_type.clone(),
+                                                Expression {
+                                                    kind: ExpressionKind::FunctionApplication(
+                                                        Box::new(
+                                                            FunctionApplicationExpression { 
+                                                                call_path_binding: TypeBinding { 
+                                                                    inner: CallPath {
+                                                                        prefixes: vec![],
+                                                                        suffix: Ident::new_no_span(format!("__contract_entry_{}", decl.call_path.suffix.clone())),
+                                                                        is_absolute: false 
+                                                                    }, 
+                                                                    type_arguments: TypeArgs::Regular(vec![]), 
+                                                                    span: Span::dummy(),
+                                                                },
+                                                                arguments: arguments_as_expressions(args_tuple_name.clone(), &decl)
+                                                            }
+                                                        )
+                                                    ),
+                                                    span: Span::dummy(),
+                                                },
+                                                false
+                                            ));
+                                            // return the encoded contract result
+                                            nodes.push(AstNode { 
                                                 content: AstNodeContent::Expression(Expression {
-                                                        kind: ExpressionKind::FunctionApplication(
-                                                            Box::new(
-                                                                FunctionApplicationExpression { 
-                                                                    call_path_binding: TypeBinding { 
-                                                                        inner: CallPath {
-                                                                            prefixes: vec![],
-                                                                            suffix: Ident::new_no_span(format!("__contract_entry_{}", decl.call_path.suffix.clone())),
-                                                                            is_absolute: false 
-                                                                        }, 
-                                                                        type_arguments: TypeArgs::Regular(vec![]), 
-                                                                        span: Span::dummy(),
-                                                                    },
-                                                                    arguments: arguments_as_expressions(args_tuple_name.clone(), &decl)
-                                                                }
-                                                            )
-                                                        ),
-                                                        span: Span::dummy(),
-                                                }),
+                                                    kind: ExpressionKind::IntrinsicFunction(IntrinsicFunctionExpression { 
+                                                        name: Ident::new_no_span("__contract_ret".to_string()), 
+                                                        kind_binding: TypeBinding { 
+                                                            inner: Intrinsic::ContractRet, 
+                                                            type_arguments: TypeArgs::Regular(vec![]), 
+                                                            span: Span::dummy()
+                                                        }, 
+                                                        arguments: vec![
+                                                            call_encode(engines, Expression {
+                                                                kind: ExpressionKind::AmbiguousVariableExpression(result_name.clone()),
+                                                                span: Span::dummy(),
+                                                            })
+                                                        ]
+                                                    }),
+                                                    span: Span::dummy(),
+                                                }), 
                                                 span: Span::dummy()
-                                            });
+                                            })
                                         },
                                         None => {
                                              // call the contract method

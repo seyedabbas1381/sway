@@ -86,6 +86,9 @@ impl ty::TyIntrinsicFunctionKind {
             Intrinsic::ContractCall => {
                 type_check_contract_call(handler, ctx, kind, arguments, type_arguments, span)
             }
+            Intrinsic::ContractRet => {
+                type_check_contract_ret(handler, ctx, kind, arguments, type_arguments, span)
+            }
         }
     }
 }
@@ -1369,6 +1372,41 @@ fn type_check_smo(
         },
         type_engine.insert(engines, TypeInfo::Tuple(vec![]), None),
     ))
+}
+
+/// Signature: `__contract_call<T>()`
+/// Description: Calls another contract
+/// Constraints: None.
+fn type_check_contract_ret(
+    handler: &Handler,
+    mut ctx: TypeCheckContext,
+    kind: sway_ast::Intrinsic,
+    arguments: Vec<Expression>,
+    type_arguments: Vec<TypeArgument>,
+    span: Span,
+) -> Result<(ty::TyIntrinsicFunctionKind, TypeId), ErrorEmitted> {
+    let type_engine = ctx.engines.te();
+    let engines = ctx.engines();
+
+    let arguments: Vec<ty::TyExpression> = arguments
+        .iter()
+        .map(|x| {
+            let ctx = ctx
+                .by_ref()
+                .with_help_text("")
+                .with_type_annotation(type_engine.insert(engines, TypeInfo::Unknown, None));
+            ty::TyExpression::type_check(handler, ctx, x.clone())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let t = ctx.engines.te().insert(ctx.engines, TypeInfo::Tuple(vec![]), None);
+
+    Ok((ty::TyIntrinsicFunctionKind {
+        kind: Intrinsic::ContractRet,
+        arguments,
+        type_arguments: vec![],
+        span: Span::dummy(),
+    }, t))
 }
 
 /// Signature: `__contract_call<T>()`

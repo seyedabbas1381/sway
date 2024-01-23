@@ -590,16 +590,13 @@ fn compile_abi_method(
         }
     };
 
-    // An ABI method is always an entry point.
-    let is_entry = true;
-
     compile_fn(
         engines,
         context,
         md_mgr,
         module,
         &ast_fn_decl,
-        is_entry,
+        false,
         Some(selector),
         logged_types_map,
         messages_types_map,

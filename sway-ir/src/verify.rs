@@ -229,7 +229,6 @@ impl<'a, 'eng> InstructionVerifier<'a, 'eng> {
                         gas,
                         ..
                     } => self.verify_contract_call(params, coins, asset_id, gas)?,
-
                     // XXX move the fuelvm verification into a module
                     InstOp::FuelVm(fuel_vm_instr) => match fuel_vm_instr {
                         FuelVmInstruction::Gtf { index, tx_field_id } => {
@@ -288,6 +287,7 @@ impl<'a, 'eng> InstructionVerifier<'a, 'eng> {
                         FuelVmInstruction::WideCmpOp { op, arg1, arg2 } => {
                             self.verify_wide_cmp(op, arg1, arg2)?
                         }
+                        FuelVmInstruction::Retd { ptr, len } => ()
                     },
                     InstOp::GetElemPtr {
                         base,

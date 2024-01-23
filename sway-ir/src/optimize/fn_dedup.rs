@@ -164,6 +164,10 @@ fn hash_fn(context: &Context, function: Function, eq_class: &mut EqClass) -> u64
                     crate::FuelVmInstruction::WideBinaryOp { op, .. } => op.hash(state),
                     crate::FuelVmInstruction::WideModularOp { op, .. } => op.hash(state),
                     crate::FuelVmInstruction::WideCmpOp { op, .. } => op.hash(state),
+                    crate::FuelVmInstruction::Retd { ptr, len } => {
+                        ptr.hash(state);
+                        len.hash(state);
+                    },
                 },
                 crate::InstOp::GetLocal(local) => function
                     .lookup_local_name(context, local)

@@ -36,6 +36,7 @@ pub enum Intrinsic {
     Smo,
     Not,
     ContractCall, // __contract_call::<ReturnType>(params, coins, asset_id, gas)
+    ContractRet,
 }
 
 impl fmt::Display for Intrinsic {
@@ -75,6 +76,7 @@ impl fmt::Display for Intrinsic {
             Intrinsic::Smo => "smo",
             Intrinsic::Not => "not",
             Intrinsic::ContractCall => "contract_call",
+            Intrinsic::ContractRet => "contract_ret",
         };
         write!(f, "{s}")
     }

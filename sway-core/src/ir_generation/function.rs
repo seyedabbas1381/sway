@@ -1321,6 +1321,18 @@ impl<'eng> FnCompiler<'eng> {
                     Ok(returned_value)
                 }
             }
+            Intrinsic::ContractRet => {
+                let span_md_idx = md_mgr.span_to_md(context, &span);
+
+                let ptr = self.compile_expression_to_value(context, md_mgr, &arguments[0])?;
+                let len = self.compile_expression_to_value(context, md_mgr, &arguments[1])?;
+                let r = self
+                    .current_block
+                    .append(context)
+                    .retd(ptr, len)
+                    .add_metadatum(context, span_md_idx);
+                Ok(r)
+            }
         }
     }
 

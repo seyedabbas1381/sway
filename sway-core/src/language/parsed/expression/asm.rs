@@ -1,9 +1,9 @@
-use super::Expression;
+use super::{Expression, parsed::ExpressionKind};
 use crate::{
     language::{AsmOp, AsmRegister},
     TypeInfo,
 };
-use sway_types::{ident::Ident, span::Span};
+use sway_types::{ident::Ident, span::Span, BaseIdent};
 
 #[derive(Debug, Clone)]
 pub struct AsmExpression {
@@ -18,4 +18,13 @@ pub struct AsmExpression {
 pub struct AsmRegisterDeclaration {
     pub(crate) name: Ident,
     pub initializer: Option<Expression>,
+}
+
+impl AsmRegisterDeclaration {
+    pub fn with_init(name: BaseIdent, initializer: Expression) -> Self {
+        AsmRegisterDeclaration { 
+            name, 
+            initializer: Some(initializer),
+        }
+    }
 }
