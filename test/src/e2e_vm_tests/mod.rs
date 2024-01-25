@@ -256,7 +256,6 @@ impl TestContext {
                 .await;
                 *output = out;
 
-                dbg!(result.is_ok());
                 let compiled = result?;
 
                 let compiled = match compiled {
@@ -429,7 +428,6 @@ impl TestContext {
                     output.push_str(&out);
                     contract_ids.push(result);
                 }
-
                 let contract_ids = contract_ids.into_iter().collect::<Result<Vec<_>, _>>()?;
                 let (result, out) =
                     harness::runs_on_node(&name, &context.run_config, &contract_ids).await;
@@ -560,8 +558,6 @@ pub async fn run(filter_config: &FilterConfig, run_config: &RunConfig) -> Result
     let mut number_of_tests_failed = 0;
     let mut failed_tests = vec![];
 
-    let names = tests.iter().map(|x| x.name.clone()).collect::<Vec<_>>();
-
     for (i, test) in tests.into_iter().enumerate() {
         let name = test.name.clone();
         print!("Testing {} ...", name.clone().bold());
@@ -632,13 +628,6 @@ pub async fn run(filter_config: &FilterConfig, run_config: &RunConfig) -> Result
             "No tests were run. Regex filters filtered out all {} tests.",
             total_number_of_tests
         );
-
-        if run_config.verbose {
-            tracing::warn!("Available tests:");
-            for t in names {
-                tracing::warn!("{}", t);
-            }
-        }
     } else {
         tracing::info!("_________________________________");
         tracing::info!(
