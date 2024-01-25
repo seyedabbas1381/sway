@@ -1,4 +1,4 @@
-use super::{Expression, parsed::ExpressionKind};
+use super::{parsed::ExpressionKind, Expression};
 use crate::{
     language::{AsmOp, AsmRegister},
     TypeInfo,
@@ -22,8 +22,8 @@ pub struct AsmRegisterDeclaration {
 
 impl AsmRegisterDeclaration {
     pub fn with_init(name: BaseIdent, initializer: Expression) -> Self {
-        AsmRegisterDeclaration { 
-            name, 
+        AsmRegisterDeclaration {
+            name,
             initializer: Some(initializer),
         }
     }

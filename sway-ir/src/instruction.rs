@@ -196,8 +196,8 @@ pub enum FuelVmInstruction {
     },
     Retd {
         ptr: Value,
-        len: Value
-    }
+        len: Value,
+    },
 }
 
 /// Comparison operations.
@@ -642,7 +642,7 @@ impl InstOp {
             | InstOp::FuelVm(FuelVmInstruction::StateStoreQuadWord { .. })
             | InstOp::FuelVm(FuelVmInstruction::StateStoreWord { .. })
             | InstOp::FuelVm(FuelVmInstruction::Revert(..))
-            | InstOp::FuelVm(FuelVmInstruction::Retd{ .. })
+            | InstOp::FuelVm(FuelVmInstruction::Retd { .. })
             | InstOp::MemCopyBytes { .. }
             | InstOp::MemCopyVal { .. }
             | InstOp::Store { .. }

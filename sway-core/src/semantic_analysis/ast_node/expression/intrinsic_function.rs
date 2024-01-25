@@ -1399,14 +1399,20 @@ fn type_check_contract_ret(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let t = ctx.engines.te().insert(ctx.engines, TypeInfo::Tuple(vec![]), None);
+    let t = ctx
+        .engines
+        .te()
+        .insert(ctx.engines, TypeInfo::Tuple(vec![]), None);
 
-    Ok((ty::TyIntrinsicFunctionKind {
-        kind: Intrinsic::ContractRet,
-        arguments,
-        type_arguments: vec![],
-        span: Span::dummy(),
-    }, t))
+    Ok((
+        ty::TyIntrinsicFunctionKind {
+            kind: Intrinsic::ContractRet,
+            arguments,
+            type_arguments: vec![],
+            span: Span::dummy(),
+        },
+        t,
+    ))
 }
 
 /// Signature: `__contract_call<T>()`

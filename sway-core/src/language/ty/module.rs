@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use sway_error::handler::{ErrorEmitted, Handler};
-use sway_types::{Span, Named};
+use sway_types::{Named, Span};
 
 use crate::{
-    decl_engine::{DeclEngine, DeclRef, DeclRefFunction, DeclEngineGet},
+    decl_engine::{DeclEngine, DeclEngineGet, DeclRef, DeclRefFunction},
     language::ModName,
-    language::{ty::*, HasModule, HasSubmodules, parsed::TreeType},
+    language::{parsed::TreeType, ty::*, HasModule, HasSubmodules},
     semantic_analysis::namespace,
     transform::{self, AllowDeprecatedState},
     Engines,

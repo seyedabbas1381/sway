@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use sway_types::{Ident, Span, BaseIdent};
+use sway_types::{BaseIdent, Ident, Span};
 
 #[derive(Debug, Clone)]
 pub struct AsmOp {

@@ -287,7 +287,7 @@ impl<'a, 'eng> InstructionVerifier<'a, 'eng> {
                         FuelVmInstruction::WideCmpOp { op, arg1, arg2 } => {
                             self.verify_wide_cmp(op, arg1, arg2)?
                         }
-                        FuelVmInstruction::Retd { ptr, len } => ()
+                        FuelVmInstruction::Retd { ptr, len } => (),
                     },
                     InstOp::GetElemPtr {
                         base,

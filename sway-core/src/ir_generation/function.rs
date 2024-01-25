@@ -1019,14 +1019,17 @@ impl<'eng> FnCompiler<'eng> {
                         dbg!(&i.arguments);
                         dbg!(self.engines.help_out(&i));
                         dbg!(&span);
-                        todo!("{:?}", CompileError::Internal(
-                            "Unable to determine ID for log instance.",
-                            span,
-                        ));
+                        todo!(
+                            "{:?}",
+                            CompileError::Internal(
+                                "Unable to determine ID for log instance.",
+                                span,
+                            )
+                        );
                         return Err(CompileError::Internal(
                             "Unable to determine ID for log instance.",
                             span,
-                        ))
+                        ));
                     }
                     Some(log_id) => {
                         convert_literal_to_value(context, &Literal::U64(**log_id as u64))

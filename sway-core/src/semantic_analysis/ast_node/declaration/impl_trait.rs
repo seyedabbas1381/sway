@@ -220,7 +220,7 @@ impl TyImplTrait {
                     &block_span,
                     true,
                 )?;
-                
+
                 ty::TyImplTrait {
                     impl_type_parameters: vec![], // this is empty because abi definitions don't support generics
                     trait_name,

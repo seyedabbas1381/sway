@@ -7,10 +7,10 @@ use crate::{
     },
     language::{parsed::CodeBlock, *},
     type_system::TypeBinding,
-    Engines, TypeArgument, TypeId, TypeArgs,
+    Engines, TypeArgs, TypeArgument, TypeId,
 };
 use sway_error::handler::ErrorEmitted;
-use sway_types::{ident::Ident, Span, Spanned, BaseIdent};
+use sway_types::{ident::Ident, BaseIdent, Span, Spanned};
 
 mod asm;
 mod match_branch;
@@ -47,11 +47,18 @@ impl Expression {
         }
     }
 
-    pub fn call_method(var_name: BaseIdent, method_name: BaseIdent, mut arguments: Vec<Expression>) -> Self {
-        arguments.insert(0, Expression {
-            kind: ExpressionKind::AmbiguousVariableExpression(var_name),
-            span: Span::dummy(),
-        });
+    pub fn call_method(
+        var_name: BaseIdent,
+        method_name: BaseIdent,
+        mut arguments: Vec<Expression>,
+    ) -> Self {
+        arguments.insert(
+            0,
+            Expression {
+                kind: ExpressionKind::AmbiguousVariableExpression(var_name),
+                span: Span::dummy(),
+            },
+        );
         Expression {
             kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {
                 method_name_binding: TypeBinding {

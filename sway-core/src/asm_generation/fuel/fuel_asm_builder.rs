@@ -305,7 +305,7 @@ impl<'ir, 'eng> FuelAsmBuilder<'ir, 'eng> {
                         arg2,
                         arg3,
                     } => self.compile_wide_modular_op(instr_val, op, result, arg1, arg2, arg3),
-                    FuelVmInstruction::Retd { ptr, len } => self.compile_retd(instr_val, ptr, len)
+                    FuelVmInstruction::Retd { ptr, len } => self.compile_retd(instr_val, ptr, len),
                 },
                 InstOp::GetElemPtr {
                     base,

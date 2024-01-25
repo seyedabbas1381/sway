@@ -608,7 +608,7 @@ fn inline_instruction(
                     .wide_cmp_op(op, map_value(arg1), map_value(arg2)),
                 FuelVmInstruction::Retd { ptr, len } => new_block
                     .append(context)
-                    .retd(map_value(ptr), map_value(len))
+                    .retd(map_value(ptr), map_value(len)),
             },
             InstOp::GetElemPtr {
                 base,

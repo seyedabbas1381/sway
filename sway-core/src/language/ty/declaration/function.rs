@@ -60,7 +60,11 @@ impl DebugWithEngines for TyFunctionDecl {
                     "<{}>",
                     self.type_parameters
                         .iter()
-                        .map(|p| format!("{:?} -> {:?}", engines.help_out(p.initial_type_id), engines.help_out(p.type_id)))
+                        .map(|p| format!(
+                            "{:?} -> {:?}",
+                            engines.help_out(p.initial_type_id),
+                            engines.help_out(p.type_id)
+                        ))
                         .collect::<Vec<_>>()
                         .join(", ")
                 )

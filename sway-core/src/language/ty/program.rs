@@ -3,7 +3,11 @@ use std::sync::Arc;
 use crate::{
     decl_engine::*,
     fuel_prelude::fuel_tx::StorageSlot,
-    language::{parsed::{self, TreeType}, ty::*, Purity},
+    language::{
+        parsed::{self, TreeType},
+        ty::*,
+        Purity,
+    },
     transform::AllowDeprecatedState,
     type_system::*,
     types::*,
@@ -457,7 +461,10 @@ impl CollectTypesMetadata for TyProgram {
             }
             // For contracts, collect metadata for all the types starting with each ABI method as
             // an entry point.
-            TyProgramKind::Contract { abi_entries, main_function } => {
+            TyProgramKind::Contract {
+                abi_entries,
+                main_function,
+            } => {
                 let entry = decl_engine.get_function(main_function);
                 metadata.append(&mut entry.collect_types_metadata(handler, ctx)?);
 

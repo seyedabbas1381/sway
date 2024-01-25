@@ -18,7 +18,7 @@ pub use use_statement::{ImportType, UseStatement};
 
 use sway_types::{span::Span, BaseIdent};
 
-use crate::TypeArgument;
+use crate::{Engines, TypeArgument, TypeInfo};
 
 use crate::Engines;
 
@@ -44,17 +44,47 @@ pub struct AstNode {
 }
 
 impl AstNode {
-    pub fn variable_declaration(name: BaseIdent, type_ascription: TypeArgument, body: Expression, is_mutable: bool) -> Self {
+    pub fn variable_declaration(
+        engines: &Engines,
+        name: BaseIdent,
+        body: Expression,
+        is_mutable: bool,
+    ) -> Self {
+        let unknown = engines.te().insert(engines, TypeInfo::Unknown, None);
         AstNode {
-            content: AstNodeContent::Declaration(
-                Declaration::VariableDeclaration(VariableDeclaration { 
-                    name, 
-                    type_ascription, 
-                    body, 
-                    is_mutable
-                })
-            ),
-            span: Span::dummy()
+            content: AstNodeContent::Declaration(Declaration::VariableDeclaration(
+                VariableDeclaration {
+                    name,
+                    type_ascription: TypeArgument {
+                        type_id: unknown,
+                        initial_type_id: unknown,
+                        span: Span::dummy(),
+                        call_path_tree: None,
+                    },
+                    body,
+                    is_mutable,
+                },
+            )),
+            span: Span::dummy(),
+        }
+    }
+
+    pub fn typed_variable_declaration(
+        name: BaseIdent,
+        type_ascription: TypeArgument,
+        body: Expression,
+        is_mutable: bool,
+    ) -> Self {
+        AstNode {
+            content: AstNodeContent::Declaration(Declaration::VariableDeclaration(
+                VariableDeclaration {
+                    name,
+                    type_ascription,
+                    body,
+                    is_mutable,
+                },
+            )),
+            span: Span::dummy(),
         }
     }
 }
