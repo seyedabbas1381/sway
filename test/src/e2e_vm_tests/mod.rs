@@ -423,10 +423,7 @@ impl TestContext {
                 let mut contract_ids = Vec::new();
                 for contract_path in contract_paths.clone() {
                     let (result, out) = run_and_capture_output(|| async {
-                        dbg!(1);
-                        let r = context.deploy_contract(contract_path).await;
-                        dbg!(2);
-                        r
+                        context.deploy_contract(contract_path).await
                     })
                     .await;
                     output.push_str(&out);
@@ -546,12 +543,13 @@ pub async fn run(filter_config: &FilterConfig, run_config: &RunConfig) -> Result
     if filter_config.first_only && !tests.is_empty() {
         tests = vec![tests.remove(0)];
     }
-    let cur_profile = if run_config.release {
-        BuildProfile::RELEASE
-    } else {
-        BuildProfile::DEBUG
-    };
-    tests.retain(|t| !t.unsupported_profiles.contains(&cur_profile));
+
+    // let cur_profile = if run_config.release {
+    //     BuildProfile::RELEASE
+    // } else {
+    //     BuildProfile::DEBUG
+    // };
+    // tests.retain(|t| !t.unsupported_profiles.contains(&cur_profile));
 
     // Run tests
     let context = TestContext {
@@ -561,6 +559,8 @@ pub async fn run(filter_config: &FilterConfig, run_config: &RunConfig) -> Result
     let mut number_of_tests_executed = 0;
     let mut number_of_tests_failed = 0;
     let mut failed_tests = vec![];
+
+    let names = tests.iter().map(|x| x.name.clone()).collect::<Vec<_>>();
 
     for (i, test) in tests.into_iter().enumerate() {
         let name = test.name.clone();
@@ -606,21 +606,21 @@ pub async fn run(filter_config: &FilterConfig, run_config: &RunConfig) -> Result
     if number_of_tests_executed == 0 {
         if let Some(skip_until) = &filter_config.skip_until {
             tracing::info!(
-                "Filtered {} tests with `skip-until` regex: {}",
+                "Filtered {} tests with `skip-until` regex: {:?}",
                 skipped_tests.len(),
                 skip_until.to_string()
             );
         }
         if let Some(include) = &filter_config.include {
             tracing::info!(
-                "Filtered {} tests with `include` regex: {}",
+                "Filtered {} tests with `include` regex: {:?}",
                 included_tests.len(),
                 include.to_string()
             );
         }
         if let Some(exclude) = &filter_config.exclude {
             tracing::info!(
-                "Filtered {} tests with `exclude` regex: {}",
+                "Filtered {} tests with `exclude` regex: {:?}",
                 excluded_tests.len(),
                 exclude.to_string()
             );
@@ -632,6 +632,13 @@ pub async fn run(filter_config: &FilterConfig, run_config: &RunConfig) -> Result
             "No tests were run. Regex filters filtered out all {} tests.",
             total_number_of_tests
         );
+
+        if run_config.verbose {
+            tracing::warn!("Available tests:");
+            for t in names {
+                tracing::warn!("{}", t);
+            }
+        }
     } else {
         tracing::info!("_________________________________");
         tracing::info!(

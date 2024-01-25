@@ -47,6 +47,13 @@ pub struct BufferReader {
 }
 
 impl BufferReader {
+    pub fn from_parts(ptr: raw_ptr, len: u64) -> BufferReader {
+        BufferReader {
+            ptr,
+            pos: 0,
+        }
+    }
+
     pub fn from_first_parameter() -> BufferReader {
         const FIRST_PARAMETER_OFFSET: u64 = 73;
 
@@ -663,6 +670,7 @@ fn ok_encode() {
 
 pub fn contract_call<T, TArgs>(contract_id: b256, method_name: str, args: TArgs, coins: u64, asset_id: b256, gas: u64) -> T
 where
+    T: AbiDecode,
     TArgs: AbiEncode
 {
     let first_parameter = encode(method_name);
@@ -674,5 +682,9 @@ where
             asm(a: second_parameter.ptr()) { a: u64 },
         )
     );
-    __contract_call::<T>(params.ptr(), coins, asset_id, gas)
+
+    let (ptr, len) = __contract_call(params.ptr(), coins, asset_id, gas);
+
+    let mut buffer = BufferReader::from_parts(ptr, len);
+    T::abi_decode(buffer)
 }

@@ -1259,6 +1259,7 @@ impl<'eng> FnCompiler<'eng> {
                 Ok(TerminatorValue::new(val, context))
             }
             Intrinsic::ContractCall => {
+                assert!(type_arguments.is_empty());
                 let return_type = convert_resolved_typeid(
                     engines.te(),
                     engines.de(),
@@ -1313,6 +1314,8 @@ impl<'eng> FnCompiler<'eng> {
                         gas,
                     )
                     .add_metadatum(context, span_md_idx);
+
+
 
                 if return_type.is_ptr(context) {
                     Ok(self

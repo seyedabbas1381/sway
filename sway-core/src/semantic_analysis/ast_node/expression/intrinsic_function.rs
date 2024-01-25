@@ -1415,7 +1415,7 @@ fn type_check_contract_ret(
     ))
 }
 
-/// Signature: `__contract_call<T>()`
+/// Signature: `__contract_call()`
 /// Description: Calls another contract
 /// Constraints: None.
 fn type_check_contract_call(
@@ -1429,6 +1429,10 @@ fn type_check_contract_call(
     let type_engine = ctx.engines.te();
     let engines = ctx.engines();
 
+    if !type_arguments.is_empty() {
+        return Err(handler.emit_err(CompileError::TypeArgumentsNotAllowed { span }));
+    }
+
     // if arguments.len() != 1 {
     //     return Err(handler.emit_err(CompileError::IntrinsicIncorrectNumArgs {
     //         name: kind.to_string(),
@@ -1438,43 +1442,23 @@ fn type_check_contract_call(
     // }
 
     // Return Type
-    let type_argument = type_arguments
-        .get(0)
-        .map(|targ| {
-            let mut ctx = ctx.by_ref().with_type_annotation(type_engine.insert(
-                engines,
-                TypeInfo::Unknown,
-                None,
-            ));
-            let initial_type_info = type_engine
-                .to_typeinfo(targ.type_id, &targ.span)
-                .map_err(|e| handler.emit_err(e.into()))
-                .unwrap_or_else(TypeInfo::ErrorRecovery);
-            let initial_type_id =
-                type_engine.insert(engines, initial_type_info, targ.span.source_id());
-            let type_id = ctx
-                .resolve_type(
-                    handler,
-                    initial_type_id,
-                    &targ.span,
-                    EnforceTypeArguments::Yes,
-                    None,
-                )
-                .unwrap_or_else(|err| {
-                    type_engine.insert(engines, TypeInfo::ErrorRecovery(err), None)
-                });
-            TypeArgument {
-                type_id,
-                initial_type_id,
-                span: span.clone(),
-                call_path_tree: targ.call_path_tree.clone(),
-            }
-        })
-        .unwrap();
-    let return_type = type_argument.type_id;
+    let ptr_type = ctx.engines.te().insert(&ctx.engines, TypeInfo::RawUntypedPtr, None);
+    let ptr_type = TypeArgument {
+        type_id: ptr_type,
+        initial_type_id: ptr_type,
+        span: Span::dummy(),
+        call_path_tree: None,
+    };
+    let len_type = ctx.engines.te().insert(&ctx.engines, TypeInfo::UnsignedInteger(IntegerBits::SixtyFour), None);
+    let len_type = TypeArgument {
+        type_id: len_type,
+        initial_type_id: len_type,
+        span: Span::dummy(),
+        call_path_tree: None,
+    };
+    let return_type_id = ctx.engines.te().insert(&ctx.engines, TypeInfo::Tuple(vec![ptr_type, len_type]), None);
 
     // Arguments
-
     let arguments: Vec<ty::TyExpression> = arguments
         .iter()
         .map(|x| {
@@ -1489,9 +1473,9 @@ fn type_check_contract_call(
     let intrinsic_function = ty::TyIntrinsicFunctionKind {
         kind,
         arguments,
-        type_arguments: vec![type_argument],
+        type_arguments: vec![],
         span,
     };
 
-    Ok((intrinsic_function, return_type))
+    Ok((intrinsic_function, return_type_id))
 }

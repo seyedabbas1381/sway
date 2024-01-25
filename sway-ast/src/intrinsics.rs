@@ -35,7 +35,7 @@ pub enum Intrinsic {
     PtrSub,
     Smo,
     Not,
-    ContractCall, // __contract_call::<ReturnType>(params, coins, asset_id, gas)
+    ContractCall, // __contract_call(params, coins, asset_id, gas)
     ContractRet, // __contract_ret(ptr, len)
 }
 
