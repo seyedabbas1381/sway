@@ -3,8 +3,8 @@ use crate::{
     language::{
         parsed::{
             AstNode, AstNodeContent, CodeBlock, Declaration, Expression, ExpressionKind,
-            FunctionDeclaration, FunctionParameter, ImplItem, ImplTrait, MatchBranch,
-            MatchExpression, MethodApplicationExpression, MethodName, Scrutinee,
+            FunctionDeclaration, FunctionDeclarationKind, FunctionParameter, ImplItem, ImplTrait,
+            MatchBranch, MatchExpression, MethodApplicationExpression, MethodName, Scrutinee,
             SubfieldExpression,
         },
         ty::{self, TyAstNode, TyDecl},

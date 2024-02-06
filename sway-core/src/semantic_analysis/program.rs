@@ -4,11 +4,11 @@ use crate::{
         parsed::{
             AsmExpression, AsmRegisterDeclaration, AstNode, AstNodeContent, CodeBlock, Declaration,
             Expression, ExpressionKind, FunctionApplicationExpression, FunctionDeclaration,
-            IfExpression, IntrinsicFunctionExpression, MatchBranch, MatchExpression,
-            MethodApplicationExpression, MethodName, ParseProgram, Scrutinee, SubfieldExpression,
-            TupleIndexExpression, VariableDeclaration,
+            FunctionDeclarationKind, IfExpression, IntrinsicFunctionExpression, MatchBranch,
+            MatchExpression, MethodApplicationExpression, MethodName, ParseProgram, Scrutinee,
+            SubfieldExpression, TreeType, TupleIndexExpression, VariableDeclaration,
         },
-        ty::{self, TyAstNode, TyDecl, TyFunctionDecl, TyProgram},
+        ty::{self, TyAstNode, TyDecl, TyFunctionDecl, TyModule, TyProgram},
         AsmOp, AsmRegister, CallPath, Literal, Purity,
     },
     metadata::MetadataManager,
@@ -17,7 +17,7 @@ use crate::{
         TypeCheckContext,
     },
     transform::AttributesMap,
-    BuildConfig, Engines, TypeArgs, TypeArgument, TypeBinding, TypeInfo,
+    BuildConfig, Engines, TypeArgs, TypeArgument, TypeBinding, TypeId, TypeInfo,
 };
 use sway_ast::Intrinsic;
 use sway_error::handler::{ErrorEmitted, Handler};
@@ -28,6 +28,233 @@ use super::{
     TypeCheckAnalysis, TypeCheckAnalysisContext, TypeCheckFinalization,
     TypeCheckFinalizationContext,
 };
+
+fn call_encode(engines: &Engines, arg: Expression) -> Expression {
+    Expression {
+        kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
+            call_path_binding: TypeBinding {
+                inner: CallPath {
+                    prefixes: vec![],
+                    suffix: Ident::new_no_span("encode".into()),
+                    is_absolute: false,
+                },
+                type_arguments: TypeArgs::Regular(vec![]),
+                span: Span::dummy(),
+            },
+            arguments: vec![arg],
+        })),
+        span: Span::dummy(),
+    }
+}
+
+fn call_decode_first_param(engines: &Engines) -> Expression {
+    let string_slice_type_id = engines.te().insert(engines, TypeInfo::StringSlice, None);
+    Expression {
+        kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
+            call_path_binding: TypeBinding {
+                inner: CallPath {
+                    prefixes: vec![],
+                    suffix: Ident::new_no_span("decode_first_param".into()),
+                    is_absolute: false,
+                },
+                type_arguments: TypeArgs::Regular(vec![TypeArgument {
+                    type_id: string_slice_type_id,
+                    initial_type_id: string_slice_type_id,
+                    span: Span::dummy(),
+                    call_path_tree: None,
+                }]),
+                span: Span::dummy(),
+            },
+            arguments: vec![],
+        })),
+        span: Span::dummy(),
+    }
+}
+
+fn call_decode_second_param(engines: &Engines, args_type: TypeArgument) -> Expression {
+    Expression {
+        kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
+            call_path_binding: TypeBinding {
+                inner: CallPath {
+                    prefixes: vec![],
+                    suffix: Ident::new_no_span("decode_second_param".into()),
+                    is_absolute: false,
+                },
+                type_arguments: TypeArgs::Regular(vec![args_type]),
+                span: Span::dummy(),
+            },
+            arguments: vec![],
+        })),
+        span: Span::dummy(),
+    }
+}
+
+fn call_eq(engines: &Engines, l: Expression, r: Expression) -> Expression {
+    Expression {
+        kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {
+            method_name_binding: TypeBinding {
+                inner: MethodName::FromModule {
+                    method_name: Ident::new_no_span("eq".to_string()),
+                },
+                type_arguments: TypeArgs::Regular(vec![]),
+                span: Span::dummy(),
+            },
+            contract_call_params: vec![],
+            arguments: vec![l, r],
+        })),
+        span: Span::dummy(),
+    }
+}
+
+fn call_fn(expr: Expression, name: &str) -> Expression {
+    Expression {
+        kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {
+            method_name_binding: TypeBinding {
+                inner: MethodName::FromModule {
+                    method_name: Ident::new_no_span(name.to_string()),
+                },
+                type_arguments: TypeArgs::Regular(vec![]),
+                span: Span::dummy(),
+            },
+            contract_call_params: vec![],
+            arguments: vec![expr],
+        })),
+        span: Span::dummy(),
+    }
+}
+
+fn arguments_type(engines: &Engines, decl: &TyFunctionDecl) -> Option<TypeArgument> {
+    if decl.parameters.is_empty() {
+        return None;
+    }
+
+    // if decl.parameters.len() == 1 {
+    //     return Some(decl.parameters[0].type_argument.clone());
+    // }
+
+    let types = decl
+        .parameters
+        .iter()
+        .map(|p| {
+            let arg_t = engines.te().get(p.type_argument.type_id);
+            let arg_t = match &*arg_t {
+                TypeInfo::Unknown => todo!(),
+                TypeInfo::UnknownGeneric {
+                    name,
+                    trait_constraints,
+                } => todo!(),
+                TypeInfo::Placeholder(_) => todo!(),
+                TypeInfo::TypeParam(_) => todo!(),
+                TypeInfo::StringSlice => todo!(),
+                TypeInfo::StringArray(_) => todo!(),
+                TypeInfo::UnsignedInteger(v) => TypeInfo::UnsignedInteger(*v),
+                TypeInfo::Enum(_) => todo!(),
+                TypeInfo::Struct(s) => TypeInfo::Struct(s.clone()),
+                TypeInfo::Boolean => todo!(),
+                TypeInfo::Tuple(_) => todo!(),
+                TypeInfo::ContractCaller { abi_name, address } => todo!(),
+                TypeInfo::Custom {
+                    qualified_call_path,
+                    type_arguments,
+                    root_type_id,
+                } => todo!(),
+                TypeInfo::B256 => TypeInfo::B256,
+                TypeInfo::Numeric => todo!(),
+                TypeInfo::Contract => todo!(),
+                TypeInfo::ErrorRecovery(_) => todo!(),
+                TypeInfo::Array(_, _) => todo!(),
+                TypeInfo::Storage { fields } => todo!(),
+                TypeInfo::RawUntypedPtr => todo!(),
+                TypeInfo::RawUntypedSlice => todo!(),
+                TypeInfo::Ptr(_) => todo!(),
+                TypeInfo::Slice(_) => todo!(),
+                TypeInfo::Alias { name, ty } => todo!(),
+                TypeInfo::TraitType {
+                    name,
+                    trait_type_id,
+                } => todo!(),
+                TypeInfo::Ref(_) => todo!(),
+            };
+            let tid = engines.te().insert(engines, arg_t, None);
+            TypeArgument {
+                type_id: tid,
+                initial_type_id: tid,
+                span: Span::dummy(),
+                call_path_tree: None,
+            }
+        })
+        .collect();
+    let type_id = engines.te().insert(engines, TypeInfo::Tuple(types), None);
+    Some(TypeArgument {
+        type_id: type_id.clone(),
+        initial_type_id: type_id,
+        span: Span::dummy(),
+        call_path_tree: None,
+    })
+}
+
+fn arguments_as_expressions(name: BaseIdent, decl: &TyFunctionDecl) -> Vec<Expression> {
+    decl.parameters
+        .iter()
+        .enumerate()
+        .map(|(idx, p)| Expression {
+            kind: ExpressionKind::TupleIndex(TupleIndexExpression {
+                prefix: Box::new(Expression {
+                    kind: ExpressionKind::AmbiguousVariableExpression(name.clone()),
+                    span: Span::dummy(),
+                }),
+                index: idx,
+                index_span: Span::dummy(),
+            }),
+            span: Span::dummy(),
+        })
+        .collect()
+}
+
+fn gen_entry_fn(
+    ctx: &mut TypeCheckContext,
+    root: &mut TyModule,
+    purity: Purity,
+    contents: Vec<AstNode>,
+    unit_type_id: TypeId,
+) -> Result<(), ErrorEmitted> {
+    let entry_fn_decl = crate::language::parsed::function::FunctionDeclaration {
+        purity,
+        attributes: AttributesMap::default(),
+        name: Ident::new_no_span("__entry".to_string()),
+        visibility: crate::language::Visibility::Public,
+        body: CodeBlock {
+            contents,
+            whole_block_span: Span::dummy(),
+        },
+        parameters: vec![],
+        span: Span::dummy(),
+        return_type: TypeArgument {
+            type_id: unit_type_id,
+            initial_type_id: unit_type_id,
+            span: Span::dummy(),
+            call_path_tree: None,
+        },
+        type_parameters: vec![],
+        where_clause: vec![],
+        kind: FunctionDeclarationKind::Entry,
+    };
+
+    let handler = Handler::default();
+    root.all_nodes.push(TyAstNode::type_check(
+        &handler,
+        ctx.by_ref(),
+        AstNode {
+            content: AstNodeContent::Declaration(Declaration::FunctionDeclaration(entry_fn_decl)),
+            span: Span::dummy(),
+        },
+    )?);
+
+    assert!(!handler.has_errors(), "{:?}", handler);
+    assert!(!handler.has_warnings(), "{:?}", handler);
+
+    Ok(())
+}
 
 impl TyProgram {
     /// Type-check the given parsed program to produce a typed program.
@@ -56,266 +283,109 @@ impl TyProgram {
 
         let mut root = ty::TyModule::type_check(handler, ctx.by_ref(), root, module_eval_order)?;
 
-        if matches!(&parsed.kind, crate::language::parsed::TreeType::Contract) {
-            fn call_encode(engines: &Engines, arg: Expression) -> Expression {
-                Expression {
-                    kind: ExpressionKind::FunctionApplication(Box::new(
-                        FunctionApplicationExpression {
-                            call_path_binding: TypeBinding {
-                                inner: CallPath {
-                                    prefixes: vec![],
-                                    suffix: Ident::new_no_span("encode".into()),
-                                    is_absolute: false,
-                                },
-                                type_arguments: TypeArgs::Regular(vec![]),
-                                span: Span::dummy(),
-                            },
-                            arguments: vec![arg],
-                        },
-                    )),
-                    span: Span::dummy(),
+        let main_decl = root
+            .all_nodes
+            .iter_mut()
+            .find_map(|x| match &mut x.content {
+                ty::TyAstNodeContent::Declaration(ty::TyDecl::FunctionDecl(decl)) => {
+                    (decl.name.as_str() == "main").then(|| engines.de().get(&decl.decl_id))
                 }
-            }
+                _ => None,
+            });
 
-            fn call_decode_first_param(engines: &Engines) -> Expression {
-                let string_slice_type_id =
-                    engines.te().insert(engines, TypeInfo::StringSlice, None);
-                Expression {
-                    kind: ExpressionKind::FunctionApplication(Box::new(
-                        FunctionApplicationExpression {
-                            call_path_binding: TypeBinding {
-                                inner: CallPath {
-                                    prefixes: vec![],
-                                    suffix: Ident::new_no_span("decode_first_param".into()),
-                                    is_absolute: false,
-                                },
-                                type_arguments: TypeArgs::Regular(vec![TypeArgument {
-                                    type_id: string_slice_type_id,
-                                    initial_type_id: string_slice_type_id,
-                                    span: Span::dummy(),
-                                    call_path_tree: None,
-                                }]),
-                                span: Span::dummy(),
-                            },
-                            arguments: vec![],
-                        },
-                    )),
-                    span: Span::dummy(),
-                }
-            }
+        let unit_type_id = engines.te().insert(engines, TypeInfo::Tuple(vec![]), None);
+        let string_slice_type_id = engines.te().insert(engines, TypeInfo::StringSlice, None);
 
-            fn call_decode_second_param(engines: &Engines, args_type: TypeArgument) -> Expression {
-                Expression {
-                    kind: ExpressionKind::FunctionApplication(Box::new(
-                        FunctionApplicationExpression {
-                            call_path_binding: TypeBinding {
-                                inner: CallPath {
-                                    prefixes: vec![],
-                                    suffix: Ident::new_no_span("decode_second_param".into()),
-                                    is_absolute: false,
-                                },
-                                type_arguments: TypeArgs::Regular(vec![args_type]),
-                                span: Span::dummy(),
-                            },
-                            arguments: vec![],
-                        },
-                    )),
-                    span: Span::dummy(),
-                }
-            }
+        match &parsed.kind {
+            TreeType::Predicate => {}
+            TreeType::Script => {
+                let main_decl = main_decl.unwrap();
+                let result_name = Ident::new_no_span("result".into());
 
-            fn call_eq(engines: &Engines, l: Expression, r: Expression) -> Expression {
-                Expression {
-                    kind: ExpressionKind::MethodApplication(Box::new(
-                        MethodApplicationExpression {
-                            method_name_binding: TypeBinding {
-                                inner: MethodName::FromModule {
-                                    method_name: Ident::new_no_span("eq".to_string()),
-                                },
-                                type_arguments: TypeArgs::Regular(vec![]),
-                                span: Span::dummy(),
-                            },
-                            contract_call_params: vec![],
-                            arguments: vec![l, r],
-                        },
-                    )),
-                    span: Span::dummy(),
-                }
-            }
-
-            fn call_fn(expr: Expression, name: &str) -> Expression {
-                Expression {
-                    kind: ExpressionKind::MethodApplication(Box::new(
-                        MethodApplicationExpression {
-                            method_name_binding: TypeBinding {
-                                inner: MethodName::FromModule {
-                                    method_name: Ident::new_no_span(name.to_string()),
-                                },
-                                type_arguments: TypeArgs::Regular(vec![]),
-                                span: Span::dummy(),
-                            },
-                            contract_call_params: vec![],
-                            arguments: vec![expr],
-                        },
-                    )),
-                    span: Span::dummy(),
-                }
-            }
-
-            fn arguments_type(engines: &Engines, decl: &TyFunctionDecl) -> Option<TypeArgument> {
-                if decl.parameters.is_empty() {
-                    return None;
-                }
-
-                // if decl.parameters.len() == 1 {
-                //     return Some(decl.parameters[0].type_argument.clone());
-                // }
-
-                let types = decl
-                    .parameters
-                    .iter()
-                    .map(|p| {
-                        let arg_t = engines.te().get(p.type_argument.type_id);
-                        let arg_t = match &*arg_t {
-                            TypeInfo::Unknown => todo!(),
-                            TypeInfo::UnknownGeneric {
-                                name,
-                                trait_constraints,
-                            } => todo!(),
-                            TypeInfo::Placeholder(_) => todo!(),
-                            TypeInfo::TypeParam(_) => todo!(),
-                            TypeInfo::StringSlice => todo!(),
-                            TypeInfo::StringArray(_) => todo!(),
-                            TypeInfo::UnsignedInteger(v) => TypeInfo::UnsignedInteger(*v),
-                            TypeInfo::Enum(_) => todo!(),
-                            TypeInfo::Struct(s) => TypeInfo::Struct(s.clone()),
-                            TypeInfo::Boolean => todo!(),
-                            TypeInfo::Tuple(_) => todo!(),
-                            TypeInfo::ContractCaller { abi_name, address } => todo!(),
-                            TypeInfo::Custom {
-                                qualified_call_path,
-                                type_arguments,
-                                root_type_id,
-                            } => todo!(),
-                            TypeInfo::B256 => TypeInfo::B256,
-                            TypeInfo::Numeric => todo!(),
-                            TypeInfo::Contract => todo!(),
-                            TypeInfo::ErrorRecovery(_) => todo!(),
-                            TypeInfo::Array(_, _) => todo!(),
-                            TypeInfo::Storage { fields } => todo!(),
-                            TypeInfo::RawUntypedPtr => todo!(),
-                            TypeInfo::RawUntypedSlice => todo!(),
-                            TypeInfo::Ptr(_) => todo!(),
-                            TypeInfo::Slice(_) => todo!(),
-                            TypeInfo::Alias { name, ty } => todo!(),
-                            TypeInfo::TraitType {
-                                name,
-                                trait_type_id,
-                            } => todo!(),
-                            TypeInfo::Ref(_) => todo!(),
-                        };
-                        let tid = engines.te().insert(engines, arg_t, None);
-                        TypeArgument {
-                            type_id: tid,
-                            initial_type_id: tid,
-                            span: Span::dummy(),
-                            call_path_tree: None,
-                        }
-                    })
-                    .collect();
-                let type_id = engines.te().insert(engines, TypeInfo::Tuple(types), None);
-                Some(TypeArgument {
-                    type_id: type_id.clone(),
-                    initial_type_id: type_id,
-                    span: Span::dummy(),
-                    call_path_tree: None,
-                })
-            }
-
-            fn arguments_as_expressions(name: BaseIdent, decl: &TyFunctionDecl) -> Vec<Expression> {
-                decl.parameters
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, p)| Expression {
-                        kind: ExpressionKind::TupleIndex(TupleIndexExpression {
-                            prefix: Box::new(Expression {
-                                kind: ExpressionKind::AmbiguousVariableExpression(name.clone()),
-                                span: Span::dummy(),
-                            }),
-                            index: idx,
-                            index_span: Span::dummy(),
-                        }),
-                        span: Span::dummy(),
-                    })
-                    .collect()
-            }
-
-            let unit_type_id = engines.te().insert(engines, TypeInfo::Tuple(vec![]), None);
-            let string_slice_type_id = engines.te().insert(engines, TypeInfo::StringSlice, None);
-
-            let mut contents = vec![AstNode {
-                content: AstNodeContent::Declaration(Declaration::VariableDeclaration(
-                    VariableDeclaration {
-                        name: Ident::new_no_span("method_name".to_string()),
-                        type_ascription: TypeArgument {
-                            type_id: string_slice_type_id,
-                            initial_type_id: string_slice_type_id,
-                            span: Span::dummy(),
-                            call_path_tree: None,
-                        },
-                        body: call_decode_first_param(engines),
-                        is_mutable: false,
-                    },
-                )),
-                span: Span::dummy(),
-            }];
-
-            let method_name_var_ref = Expression {
-                kind: ExpressionKind::Variable(Ident::new_no_span("method_name".to_string())),
-                span: Span::dummy(),
-            };
-
-            fn import_core_ops(ctx: &mut TypeCheckContext<'_>) -> bool {
-                // Check if the compilation context has acces to the
-                // core library.
-                let handler = Handler::default();
-                let _ = ctx.star_import(
-                    &handler,
-                    &[
-                        Ident::new_no_span("core".into()),
-                        Ident::new_no_span("ops".into()),
-                    ],
-                    true,
+                let mut contents = vec![];
+                let arguments = AstNode::push_var_declaration_decoded_args(
+                    engines,
+                    &mut contents,
+                    result_name.clone(),
+                    &*main_decl,
+                );
+                AstNode::push_encode_and_return(
+                    engines,
+                    &mut contents,
+                    result_name,
+                    Expression::call_function_with_suffix(
+                        Ident::new_no_span("main".into()),
+                        arguments,
+                    ),
                 );
 
-                !handler.has_errors()
+                gen_entry_fn(&mut ctx, &mut root, Purity::Pure, contents, unit_type_id)?;
             }
-
-            assert!(import_core_ops(&mut ctx));
-
-            let all_entries: Vec<_> = root
-                .submodules_recursive()
-                .flat_map(|(_, submod)| submod.module.contract_fns(engines))
-                .chain(root.contract_fns(engines))
-                .collect();
-            for r in all_entries {
-                let decl = engines.de().get(r.id());
-                let args_type = arguments_type(engines, &decl);
-                let result_type = decl.return_type.clone();
-                let args_tuple_name = Ident::new_no_span("args".to_string());
-                let result_name = Ident::new_no_span("result".to_string());
-
-                let slice = engines
-                    .te()
-                    .insert(engines, TypeInfo::RawUntypedSlice, None);
-                let slice = TypeArgument {
-                    type_id: slice,
-                    initial_type_id: slice,
+            TreeType::Contract => {
+                let main_decl = main_decl.unwrap();
+                let mut contents = vec![AstNode {
+                    content: AstNodeContent::Declaration(Declaration::VariableDeclaration(
+                        VariableDeclaration {
+                            name: Ident::new_no_span("method_name".to_string()),
+                            type_ascription: TypeArgument {
+                                type_id: string_slice_type_id,
+                                initial_type_id: string_slice_type_id,
+                                span: Span::dummy(),
+                                call_path_tree: None,
+                            },
+                            body: call_decode_first_param(engines),
+                            is_mutable: false,
+                        },
+                    )),
                     span: Span::dummy(),
-                    call_path_tree: None,
+                }];
+
+                let method_name_var_ref = Expression {
+                    kind: ExpressionKind::Variable(Ident::new_no_span("method_name".to_string())),
+                    span: Span::dummy(),
                 };
 
-                contents.push(AstNode {
+                fn import_core_ops(ctx: &mut TypeCheckContext<'_>) -> bool {
+                    // Check if the compilation context has acces to the
+                    // core library.
+                    let handler = Handler::default();
+                    let _ = ctx.star_import(
+                        &handler,
+                        &[
+                            Ident::new_no_span("core".into()),
+                            Ident::new_no_span("ops".into()),
+                        ],
+                        true,
+                    );
+
+                    !handler.has_errors()
+                }
+
+                assert!(import_core_ops(&mut ctx));
+
+                let all_entries: Vec<_> = root
+                    .submodules_recursive()
+                    .flat_map(|(_, submod)| submod.module.contract_fns(engines))
+                    .chain(root.contract_fns(engines))
+                    .collect();
+                for r in all_entries {
+                    let decl = engines.de().get(r.id());
+                    let args_type = arguments_type(engines, &decl);
+                    let result_type = decl.return_type.clone();
+                    let args_tuple_name = Ident::new_no_span("args".to_string());
+                    let result_name = Ident::new_no_span("result".to_string());
+
+                    let slice = engines
+                        .te()
+                        .insert(engines, TypeInfo::RawUntypedSlice, None);
+                    let slice = TypeArgument {
+                        type_id: slice,
+                        initial_type_id: slice,
+                        span: Span::dummy(),
+                        call_path_tree: None,
+                    };
+
+                    contents.push(AstNode {
                     content: AstNodeContent::Expression(Expression {
                         kind: ExpressionKind::If(IfExpression {
                             // call eq
@@ -406,39 +476,17 @@ impl TyProgram {
                     }),
                     span: Span::dummy(),
                 });
-            }
+                }
 
-            let entry_fn_decl = crate::language::parsed::function::FunctionDeclaration {
-                purity: Purity::ReadsWrites,
-                attributes: AttributesMap::default(),
-                name: Ident::new_no_span("__entry".to_string()),
-                visibility: crate::language::Visibility::Public,
-                body: CodeBlock {
+                gen_entry_fn(
+                    &mut ctx,
+                    &mut root,
+                    Purity::ReadsWrites,
                     contents,
-                    whole_block_span: Span::dummy(),
-                },
-                parameters: vec![],
-                span: Span::dummy(),
-                return_type: TypeArgument {
-                    type_id: unit_type_id,
-                    initial_type_id: unit_type_id,
-                    span: Span::dummy(),
-                    call_path_tree: None,
-                },
-                type_parameters: vec![],
-                where_clause: vec![],
-            };
-
-            root.all_nodes.push(TyAstNode::type_check(
-                handler,
-                ctx,
-                AstNode {
-                    content: AstNodeContent::Declaration(Declaration::FunctionDeclaration(
-                        entry_fn_decl,
-                    )),
-                    span: Span::dummy(),
-                },
-            )?);
+                    unit_type_id,
+                )?;
+            }
+            TreeType::Library => {}
         }
 
         let (kind, declarations, configurables) =

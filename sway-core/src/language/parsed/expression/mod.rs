@@ -30,6 +30,13 @@ pub struct Expression {
 }
 
 impl Expression {
+    pub fn literal_u64(value: u64) -> Self {
+        Expression {
+            kind: ExpressionKind::Literal(Literal::U64(value)),
+            span: Span::dummy(),
+        }
+    }
+
     pub fn code_block(nodes: impl IntoIterator<Item = parsed::AstNode>) -> Self {
         Expression {
             kind: ExpressionKind::CodeBlock(CodeBlock {
@@ -43,6 +50,24 @@ impl Expression {
     pub fn ambiguous_variable_expression(name: BaseIdent) -> Self {
         Expression {
             kind: ExpressionKind::AmbiguousVariableExpression(name),
+            span: Span::dummy(),
+        }
+    }
+
+    pub fn call_function_with_suffix(suffix: BaseIdent, arguments: Vec<Expression>) -> Self {
+        Expression {
+            kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
+                call_path_binding: TypeBinding {
+                    inner: CallPath {
+                        prefixes: vec![],
+                        suffix,
+                        is_absolute: false,
+                    },
+                    type_arguments: crate::TypeArgs::Regular(vec![]),
+                    span: Span::dummy(),
+                },
+                arguments,
+            })),
             span: Span::dummy(),
         }
     }
@@ -69,6 +94,50 @@ impl Expression {
                 contract_call_params: vec![],
                 arguments,
             })),
+            span: Span::dummy(),
+        }
+    }
+
+    pub fn retd(ptr: Expression, len: Expression) -> Self {
+        Expression {
+            kind: ExpressionKind::IntrinsicFunction(IntrinsicFunctionExpression {
+                name: Ident::new_no_span("__contract_ret".into()),
+                kind_binding: TypeBinding {
+                    inner: Intrinsic::ContractRet,
+                    type_arguments: TypeArgs::Regular(vec![]),
+                    span: Span::dummy(),
+                },
+                arguments: vec![ptr, len],
+            }),
+            span: Span::dummy(),
+        }
+    }
+
+    pub fn retd_addr_of_variable(var: BaseIdent, len: Expression) -> Self {
+        Expression {
+            kind: ExpressionKind::IntrinsicFunction(IntrinsicFunctionExpression {
+                name: Ident::new_no_span("__contract_ret".into()),
+                kind_binding: TypeBinding {
+                    inner: Intrinsic::ContractRet,
+                    type_arguments: TypeArgs::Regular(vec![]),
+                    span: Span::dummy(),
+                },
+                arguments: vec![
+                    Expression {
+                        kind: ExpressionKind::IntrinsicFunction(IntrinsicFunctionExpression {
+                            name: Ident::new_no_span("__addr_of".into()),
+                            kind_binding: TypeBinding {
+                                inner: Intrinsic::AddrOf,
+                                type_arguments: TypeArgs::Regular(vec![]),
+                                span: Span::dummy(),
+                            },
+                            arguments: vec![Expression::ambiguous_variable_expression(var)],
+                        }),
+                        span: Span::dummy(),
+                    },
+                    len,
+                ],
+            }),
             span: Span::dummy(),
         }
     }

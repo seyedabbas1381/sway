@@ -47,7 +47,7 @@ pub struct BufferReader {
 }
 
 impl BufferReader {
-    pub fn from_parts(ptr: raw_ptr, len: u64) -> BufferReader {
+    pub fn from_parts(ptr: raw_ptr, _len: u64) -> BufferReader {
         BufferReader {
             ptr,
             pos: 0,
@@ -405,7 +405,7 @@ where
 
 impl AbiEncode for ()
 {
-    fn abi_encode(self, ref mut buffer: Buffer) {
+    fn abi_encode(self, ref mut _buffer: Buffer) {
     }
 }
 

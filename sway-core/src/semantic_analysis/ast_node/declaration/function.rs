@@ -56,6 +56,7 @@ impl ty::TyFunctionDecl {
             visibility,
             purity,
             where_clause,
+            kind,
             ..
         } = fn_decl;
         let mut return_type = fn_decl.return_type.clone();
@@ -160,8 +161,30 @@ impl ty::TyFunctionDecl {
                     is_trait_method_dummy: false,
                 };
 
-                Ok(function_decl)
-            })
+        let function_decl = ty::TyFunctionDecl {
+            name: name.clone(),
+            body: TyCodeBlock::default(),
+            parameters: new_parameters,
+            implementing_type: None,
+            implementing_for_typeid,
+            span: span.clone(),
+            call_path,
+            attributes: attributes.clone(),
+            return_type,
+            type_parameters: new_type_parameters,
+            visibility,
+            is_contract_call,
+            purity: *purity,
+            where_clause: where_clause.clone(),
+            is_trait_method_dummy: false,
+            kind: match kind {
+                FunctionDeclarationKind::Default => ty::TyFunctionDeclKind::Default,
+                FunctionDeclarationKind::Entry => ty::TyFunctionDeclKind::Entry,
+                FunctionDeclarationKind::Test => ty::TyFunctionDeclKind::Test,
+            },
+        };
+
+        Ok(function_decl)
     }
 
     pub fn type_check_body(
