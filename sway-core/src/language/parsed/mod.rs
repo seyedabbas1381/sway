@@ -13,18 +13,18 @@ pub use expression::*;
 pub use include_statement::IncludeStatement;
 pub use module::{ParseModule, ParseSubmodule};
 pub use program::{ParseProgram, TreeType};
-pub use return_statement::*;
 use sway_ast::Intrinsic;
 use sway_error::handler::ErrorEmitted;
 pub use use_statement::{ImportType, UseStatement};
 
 use sway_types::{span::Span, BaseIdent, Ident};
 
-use crate::{decl_engine::DeclEngineGet, Engines, TypeArgs, TypeArgument, TypeBinding, TypeInfo};
+use crate::{
+    decl_engine::{parsed_engine::ParsedDeclEngineInsert, DeclEngineGet},
+    Engines, TypeArgs, TypeArgument, TypeBinding, TypeInfo,
+};
 
 use super::{ty::TyFunctionDecl, CallPath};
-
-use crate::Engines;
 
 /// Represents some exportable information that results from compiling some
 /// Sway source code.
@@ -55,39 +55,38 @@ impl AstNode {
         is_mutable: bool,
     ) -> Self {
         let unknown = engines.te().insert(engines, TypeInfo::Unknown, None);
+        let var_decl = engines.pe().insert(VariableDeclaration {
+            name,
+            type_ascription: TypeArgument {
+                type_id: unknown,
+                initial_type_id: unknown,
+                span: Span::dummy(),
+                call_path_tree: None,
+            },
+            body,
+            is_mutable,
+        });
         AstNode {
-            content: AstNodeContent::Declaration(Declaration::VariableDeclaration(
-                VariableDeclaration {
-                    name,
-                    type_ascription: TypeArgument {
-                        type_id: unknown,
-                        initial_type_id: unknown,
-                        span: Span::dummy(),
-                        call_path_tree: None,
-                    },
-                    body,
-                    is_mutable,
-                },
-            )),
+            content: AstNodeContent::Declaration(Declaration::VariableDeclaration(var_decl)),
             span: Span::dummy(),
         }
     }
 
     pub fn typed_variable_declaration(
+        engines: &Engines,
         name: BaseIdent,
         type_ascription: TypeArgument,
         body: Expression,
         is_mutable: bool,
     ) -> Self {
+        let var_decl = engines.pe().insert(VariableDeclaration {
+            name,
+            type_ascription,
+            body,
+            is_mutable,
+        });
         AstNode {
-            content: AstNodeContent::Declaration(Declaration::VariableDeclaration(
-                VariableDeclaration {
-                    name,
-                    type_ascription,
-                    body,
-                    is_mutable,
-                },
-            )),
+            content: AstNodeContent::Declaration(Declaration::VariableDeclaration(var_decl)),
             span: Span::dummy(),
         }
     }
@@ -220,13 +219,13 @@ impl AstNode {
         })
     }
 
-    fn call_decode_first_param(engines: &Engines, args_type: TypeArgument) -> Expression {
+    fn decode_script_data(engines: &Engines, args_type: TypeArgument) -> Expression {
         Expression {
             kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
                 call_path_binding: TypeBinding {
                     inner: CallPath {
                         prefixes: vec![],
-                        suffix: Ident::new_no_span("decode_first_param".into()),
+                        suffix: Ident::new_no_span("decode_script_data".into()),
                         is_absolute: false,
                     },
                     type_arguments: TypeArgs::Regular(vec![args_type]),
@@ -256,7 +255,7 @@ impl AstNode {
             .collect()
     }
 
-    pub fn push_var_declaration_decoded_args(
+    pub fn push_decode_script_data_as_fn_args(
         engines: &Engines,
         contents: &mut Vec<AstNode>,
         var: BaseIdent,
@@ -264,9 +263,10 @@ impl AstNode {
     ) -> Vec<Expression> {
         let args_type = Self::arguments_type(engines, &decl).unwrap();
         contents.push(AstNode::typed_variable_declaration(
+            engines,
             var.clone(),
             args_type.clone(),
-            Self::call_decode_first_param(engines, args_type),
+            Self::decode_script_data(engines, args_type),
             false,
         ));
 

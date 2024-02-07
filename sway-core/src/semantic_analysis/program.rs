@@ -1,5 +1,5 @@
 use crate::{
-    decl_engine::{self, DeclEngineGet},
+    decl_engine::{self, parsed_engine::ParsedDeclEngineInsert, DeclEngineGet, DeclEngineInsert},
     language::{
         parsed::{
             AsmExpression, AsmRegisterDeclaration, AstNode, AstNodeContent, CodeBlock, Declaration,
@@ -239,6 +239,7 @@ fn gen_entry_fn(
         where_clause: vec![],
         kind: FunctionDeclarationKind::Entry,
     };
+    let entry_fn_decl = ctx.engines.pe().insert(entry_fn_decl);
 
     let handler = Handler::default();
     root.all_nodes.push(TyAstNode::type_check(
@@ -270,7 +271,7 @@ impl TyProgram {
         build_config: Option<&BuildConfig>,
     ) -> Result<Self, ErrorEmitted> {
         let mut namespace = Namespace::init_root(initial_namespace);
-        let ctx = TypeCheckContext::from_root(&mut namespace, engines)
+        let mut ctx = TypeCheckContext::from_root(&mut namespace, engines)
             .with_kind(parsed.kind.clone())
             .with_experimental_flags(build_config.map(|x| x.experimental));
 
@@ -303,7 +304,7 @@ impl TyProgram {
                 let result_name = Ident::new_no_span("result".into());
 
                 let mut contents = vec![];
-                let arguments = AstNode::push_var_declaration_decoded_args(
+                let arguments = AstNode::push_decode_script_data_as_fn_args(
                     engines,
                     &mut contents,
                     result_name.clone(),
@@ -323,19 +324,20 @@ impl TyProgram {
             }
             TreeType::Contract => {
                 let main_decl = main_decl.unwrap();
+                let var_decl = ctx.engines.pe().insert(VariableDeclaration {
+                    name: Ident::new_no_span("method_name".to_string()),
+                    type_ascription: TypeArgument {
+                        type_id: string_slice_type_id,
+                        initial_type_id: string_slice_type_id,
+                        span: Span::dummy(),
+                        call_path_tree: None,
+                    },
+                    body: call_decode_first_param(engines),
+                    is_mutable: false,
+                });
                 let mut contents = vec![AstNode {
                     content: AstNodeContent::Declaration(Declaration::VariableDeclaration(
-                        VariableDeclaration {
-                            name: Ident::new_no_span("method_name".to_string()),
-                            type_ascription: TypeArgument {
-                                type_id: string_slice_type_id,
-                                initial_type_id: string_slice_type_id,
-                                span: Span::dummy(),
-                                call_path_tree: None,
-                            },
-                            body: call_decode_first_param(engines),
-                            is_mutable: false,
-                        },
+                        var_decl,
                     )),
                     span: Span::dummy(),
                 }];
@@ -405,6 +407,7 @@ impl TyProgram {
                                     let arguments = if let Some(args_type) = args_type {
                                         // decode parameters
                                         nodes.push(AstNode::typed_variable_declaration(
+                                            engines,
                                             args_tuple_name.clone(),
                                             args_type.clone(),
                                             call_decode_second_param(engines, args_type),
@@ -417,6 +420,7 @@ impl TyProgram {
 
                                     // call the contract method
                                     nodes.push(AstNode::typed_variable_declaration(
+                                        engines,
                                         result_name.clone(),
                                         slice,
                                         call_encode(engines, Expression {

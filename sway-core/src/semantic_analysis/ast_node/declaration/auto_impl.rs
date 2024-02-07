@@ -7,7 +7,7 @@ use crate::{
             MatchBranch, MatchExpression, MethodApplicationExpression, MethodName, Scrutinee,
             SubfieldExpression,
         },
-        ty::{self, TyAstNode, TyDecl},
+        ty::{self, TyAstNode, TyDecl, TyFunctionDeclKind},
         CallPath, QualifiedCallPath,
     },
     semantic_analysis::{type_check_context::EnforceTypeArguments, TypeCheckContext},
@@ -471,6 +471,7 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
             },
             type_parameters: vec![],
             where_clause: vec![],
+            kind: FunctionDeclarationKind::Default,
         };
         let impl_trait_item = engines.pe().insert(impl_trait_item);
 
@@ -834,6 +835,7 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
             },
             type_parameters: vec![],
             where_clause: vec![],
+            kind: FunctionDeclarationKind::Default,
         };
         let impl_trait_item = engines.pe().insert(impl_trait_item);
 

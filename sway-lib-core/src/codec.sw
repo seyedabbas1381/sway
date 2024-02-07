@@ -82,6 +82,15 @@ impl BufferReader {
         }
     }
 
+    pub fn from_script_data() -> BufferReader {
+        let ptr = __gtf::<raw_ptr>(0, 0xA); // SCRIPT_DATA
+        let _len = __gtf::<u64>(0, 0x4); // SCRIPT_DATA_LEN
+        BufferReader {
+            ptr,
+            pos: 0,
+        }
+    }
+
     pub fn read_bytes(ref mut self, count: u64) -> raw_slice {
         let next_pos = self.pos + count;
 
@@ -93,6 +102,35 @@ impl BufferReader {
         self.pos = next_pos;
 
         slice
+    }
+
+    pub fn read<T>(ref mut self) -> T {
+        let ptr = self.ptr.add::<u8>(self.pos);
+
+        let size = __size_of::<T>();
+        let next_pos = self.pos + size;
+
+        if __is_reference_type::<T>() {
+            let v = asm(ptr: ptr) {
+                ptr: T
+            };
+            self.pos = next_pos;
+            v
+        } else if size == 1 {
+            let v = asm(ptr: ptr, val) {
+                lb val ptr i0;
+                val: T
+            };
+            self.pos = next_pos;
+            v
+        } else {
+            let v = asm(ptr: ptr, val) {
+                lw val ptr i0;
+                val: T
+            };
+            self.pos = next_pos;
+            v
+        }
     }
 }
 
@@ -202,7 +240,7 @@ impl AbiEncode for u8 {
     }
 }
 
-// Encode Strings
+// Encode str slice and str arrays
 
 impl AbiEncode for str {
     fn abi_encode(self, ref mut buffer: Buffer) {
@@ -220,24 +258,6 @@ impl AbiEncode for str {
         }
     }
 }
-
-impl AbiEncode for raw_slice {
-    fn abi_encode(self, ref mut buffer: Buffer) {
-        let len = self.number_of_bytes();
-        buffer.push(len);
-
-        let ptr = self.ptr();
-
-        let mut i = 0;
-        while i < len {
-            let byte = ptr.add::<u8>(i).read::<u8>();
-            buffer.push(byte);
-            i += 1;
-        }
-    }
-}
-
-// str arrays
 
 impl AbiEncode for str[0] {
     fn abi_encode(self, ref mut _buffer: Buffer) {}
@@ -330,13 +350,20 @@ impl AbiEncode for str[5] {
 
 // Encode Arrays and Slices
 
-pub fn encode<T>(item: T) -> raw_slice
-where
-    T: AbiEncode
-{
-    let mut buffer = Buffer::new();
-    item.abi_encode(buffer);
-    buffer.as_raw_slice()
+impl AbiEncode for raw_slice {
+    fn abi_encode(self, ref mut buffer: Buffer) {
+        let len = self.number_of_bytes();
+        buffer.push(len);
+
+        let ptr = self.ptr();
+
+        let mut i = 0;
+        while i < len {
+            let byte = ptr.add::<u8>(i).read::<u8>();
+            buffer.push(byte);
+            i += 1;
+        }
+    }
 }
 
 impl<T> AbiEncode for [T; 0]
@@ -493,6 +520,15 @@ where
     }
 }
 
+pub fn encode<T>(item: T) -> raw_slice
+where
+    T: AbiEncode
+{
+    let mut buffer = Buffer::new();
+    item.abi_encode(buffer);
+    buffer.as_raw_slice()
+}
+
 fn assert_encoding<T, SLICE>(value: T, expected: SLICE)
 where
     T: AbiEncode,
@@ -522,6 +558,9 @@ where
 
     if !result {
         __revert(0);
+    }
+}
+
 // Decode 
 
 pub trait AbiDecode {
@@ -530,19 +569,13 @@ pub trait AbiDecode {
 
 impl AbiDecode for u64 {
     fn abi_decode(ref mut buffer: BufferReader) -> u64 {
-        let bytes = buffer.read_bytes(8);
-        asm(bytes: bytes) {
-            bytes: u64
-        }
+        buffer.read::<u64>()
     }
 }
 
 impl AbiDecode for b256 {
     fn abi_decode(ref mut buffer: BufferReader) -> b256 {
-        let bytes = buffer.read_bytes(32);
-        asm(bytes: bytes) {
-            bytes: b256
-        }
+        buffer.read::<b256>()
     }
 }
 
@@ -550,7 +583,6 @@ impl AbiDecode for str {
     fn abi_decode(ref mut buffer: BufferReader) -> str {
         let len = u64::abi_decode(buffer);
         let data = buffer.read_bytes(len);
-
         asm(s: (data.ptr(), len)) {
             s: str
         }

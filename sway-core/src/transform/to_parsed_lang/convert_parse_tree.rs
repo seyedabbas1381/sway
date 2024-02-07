@@ -528,6 +528,7 @@ fn item_fn_to_function_declaration(
             })
             .transpose()?
             .unwrap_or(vec![]),
+        kind: FunctionDeclarationKind::Default,
     };
     let decl_id = engines.pe().insert(fn_decl);
     Ok(decl_id)

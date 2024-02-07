@@ -1280,13 +1280,23 @@ impl<'eng> FnCompiler<'eng> {
                     Type::new_ptr(context, return_type)
                 };
 
-                let params = self.compile_expression_to_value(context, md_mgr, &arguments[0])?;
+                let params = return_on_termination_or_extract!(self.compile_expression_to_value(
+                    context,
+                    md_mgr,
+                    &arguments[0]
+                )?);
 
-                let coins = self.compile_expression_to_value(context, md_mgr, &arguments[1])?;
+                let coins = return_on_termination_or_extract!(self.compile_expression_to_value(
+                    context,
+                    md_mgr,
+                    &arguments[1]
+                )?);
 
                 // asset id
                 let b256_ty = Type::get_b256(context);
-                let asset_id = self.compile_expression_to_value(context, md_mgr, &arguments[2])?;
+                let asset_id = return_on_termination_or_extract!(
+                    self.compile_expression_to_value(context, md_mgr, &arguments[2])?
+                );
                 let tmp_asset_id_name = self.lexical_map.insert_anon();
                 let tmp_var = self
                     .function
@@ -1298,7 +1308,11 @@ impl<'eng> FnCompiler<'eng> {
                 self.current_block.append(context).store(tmp_val, asset_id);
                 let asset_id = self.current_block.append(context).get_local(tmp_var);
 
-                let gas = self.compile_expression_to_value(context, md_mgr, &arguments[3])?;
+                let gas = return_on_termination_or_extract!(self.compile_expression_to_value(
+                    context,
+                    md_mgr,
+                    &arguments[3]
+                )?);
 
                 let span_md_idx = md_mgr.span_to_md(context, &span);
 
@@ -1315,29 +1329,37 @@ impl<'eng> FnCompiler<'eng> {
                     )
                     .add_metadatum(context, span_md_idx);
 
-
-
                 if return_type.is_ptr(context) {
-                    Ok(self
-                        .current_block
-                        .append(context)
-                        .load(returned_value)
-                        .add_metadatum(context, span_md_idx))
+                    Ok(TerminatorValue::new(
+                        self.current_block
+                            .append(context)
+                            .load(returned_value)
+                            .add_metadatum(context, span_md_idx),
+                        context,
+                    ))
                 } else {
-                    Ok(returned_value)
+                    Ok(TerminatorValue::new(returned_value, context))
                 }
             }
             Intrinsic::ContractRet => {
                 let span_md_idx = md_mgr.span_to_md(context, &span);
 
-                let ptr = self.compile_expression_to_value(context, md_mgr, &arguments[0])?;
-                let len = self.compile_expression_to_value(context, md_mgr, &arguments[1])?;
+                let ptr = return_on_termination_or_extract!(self.compile_expression_to_value(
+                    context,
+                    md_mgr,
+                    &arguments[0]
+                )?);
+                let len = return_on_termination_or_extract!(self.compile_expression_to_value(
+                    context,
+                    md_mgr,
+                    &arguments[1]
+                )?);
                 let r = self
                     .current_block
                     .append(context)
                     .retd(ptr, len)
                     .add_metadatum(context, span_md_idx);
-                Ok(r)
+                Ok(TerminatorValue::new(r, context))
             }
         }
     }
