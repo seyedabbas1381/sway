@@ -203,26 +203,23 @@ impl TyDecl {
                     &impl_trait.items
                 } else {
                     for i in &impl_trait.items {
-                        match i {
-                            ty::TyTraitItem::Fn(f) => {
-                                let decl = engines.de().get(f.id());
-                                ctx.namespace.insert_symbol(
-                                    handler,
-                                    Ident::new_no_span(format!(
-                                        "__contract_entry_{}",
-                                        decl.name.clone()
-                                    )),
-                                    TyDecl::FunctionDecl(FunctionDecl {
-                                        name: decl.name.clone(),
-                                        decl_id: f.id().clone(),
-                                        subst_list: Template::default(),
-                                        decl_span: f.span(),
-                                    }),
-                                    ConstShadowingMode::ItemStyle,
-                                    GenericShadowingMode::Allow,
-                                );
-                            }
-                            _ => {}
+                        if let ty::TyTraitItem::Fn(f) = i {
+                            let decl = engines.de().get(f.id());
+                            let _ = ctx.namespace.insert_symbol(
+                                handler,
+                                Ident::new_no_span(format!(
+                                    "__contract_entry_{}",
+                                    decl.name.clone()
+                                )),
+                                TyDecl::FunctionDecl(FunctionDecl {
+                                    name: decl.name.clone(),
+                                    decl_id: *f.id(),
+                                    subst_list: Template::default(),
+                                    decl_span: f.span(),
+                                }),
+                                ConstShadowingMode::ItemStyle,
+                                GenericShadowingMode::Allow,
+                            );
                         }
                     }
 

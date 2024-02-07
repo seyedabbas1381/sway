@@ -36,7 +36,7 @@ pub enum Intrinsic {
     Smo,
     Not,
     ContractCall, // __contract_call(params, coins, asset_id, gas)
-    ContractRet, // __contract_ret(ptr, len)
+    ContractRet,  // __contract_ret(ptr, len)
 }
 
 impl fmt::Display for Intrinsic {

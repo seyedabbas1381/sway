@@ -809,7 +809,7 @@ impl ReplaceDecls for TyExpressionVariant {
                         lines
                     }
 
-                    let decl = ctx.engines().de().get(fn_ref);
+                    //let decl = ctx.engines().de().get(fn_ref);
                     if stack_frame_depth() > 5000 {
                         dbg!(decl_mapping);
                         todo!("{:?}", fn_ref.name());

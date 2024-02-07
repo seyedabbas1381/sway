@@ -1,4 +1,4 @@
-use super::{parsed::ExpressionKind, Expression};
+use super::Expression;
 use crate::{
     language::{AsmOp, AsmRegister},
     TypeInfo,

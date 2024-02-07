@@ -16,7 +16,6 @@ use ast_node::typed_expression::check_function_arguments_arity;
 use indexmap::IndexMap;
 use std::collections::VecDeque;
 use std::collections::{HashMap, VecDeque};
-use sway_ast::Intrinsic;
 use sway_error::{
     error::CompileError,
     handler::{ErrorEmitted, Handler},
@@ -34,7 +33,7 @@ pub(crate) fn type_check_method_application(
     arguments: Vec<Expression>,
     span: Span,
 ) -> Result<ty::TyExpression, ErrorEmitted> {
-    let aaaa = arguments.clone();
+    // let aaaa = arguments.clone();
 
     let type_engine = ctx.engines.te();
     let decl_engine = ctx.engines.de();
@@ -344,7 +343,7 @@ pub(crate) fn type_check_method_application(
         is_method_call_syntax_used,
     )?;
 
-    let mut old_arguments = arguments;
+    let old_arguments = arguments;
     let arguments = method
         .parameters
         .iter()

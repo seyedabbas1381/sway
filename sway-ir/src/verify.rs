@@ -123,7 +123,7 @@ impl<'eng> Context<'eng> {
         .verify_instructions();
 
         if r.is_err() {
-            println!("{}", self.to_string());
+            println!("{}", self);
             println!("{}", cur_function.get_name(self));
             println!("{}", cur_block.get_label(self));
         }
@@ -287,7 +287,7 @@ impl<'a, 'eng> InstructionVerifier<'a, 'eng> {
                         FuelVmInstruction::WideCmpOp { op, arg1, arg2 } => {
                             self.verify_wide_cmp(op, arg1, arg2)?
                         }
-                        FuelVmInstruction::Retd { ptr, len } => (),
+                        FuelVmInstruction::Retd { .. } => (),
                     },
                     InstOp::GetElemPtr {
                         base,
@@ -685,7 +685,7 @@ impl<'a, 'eng> InstructionVerifier<'a, 'eng> {
         // - The asset_id must be a B256
 
         // params needs to be u64 because it was a `raw ptr` when typed
-        let params_type = params.get_type(self.context);
+        let _params_type = params.get_type(self.context);
         if !params
             .get_type(self.context)
             .unwrap()

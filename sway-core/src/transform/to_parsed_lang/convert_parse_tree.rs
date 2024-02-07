@@ -51,7 +51,7 @@ pub fn convert_parse_tree(
     module: Module,
 ) -> Result<(TreeType, ParseTree), ErrorEmitted> {
     let tree_type = convert_module_kind(&module.kind);
-    context.set_program_type(tree_type.clone());
+    context.set_program_type(tree_type);
     let tree = module_to_sway_parse_tree(context, handler, engines, module)?;
     Ok((tree_type, tree))
 }

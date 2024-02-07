@@ -742,7 +742,7 @@ fn connect_trait_declaration(
         },
         TraitNamespaceEntry {
             trait_idx: entry_node,
-            module_tree_type: tree_type.clone(),
+            module_tree_type: *tree_type,
         },
     );
 }
@@ -766,7 +766,7 @@ fn connect_abi_declaration(
         },
         TraitNamespaceEntry {
             trait_idx: entry_node,
-            module_tree_type: tree_type.clone(),
+            module_tree_type: *tree_type,
         },
     );
 

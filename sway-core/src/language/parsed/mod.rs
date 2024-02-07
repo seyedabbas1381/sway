@@ -20,8 +20,8 @@ pub use use_statement::{ImportType, UseStatement};
 use sway_types::{span::Span, BaseIdent, Ident};
 
 use crate::{
-    decl_engine::{parsed_engine::ParsedDeclEngineInsert, DeclEngineGet},
-    Engines, TypeArgs, TypeArgument, TypeBinding, TypeInfo,
+    decl_engine::parsed_engine::ParsedDeclEngineInsert, Engines, TypeArgs, TypeArgument,
+    TypeBinding, TypeInfo,
 };
 
 use super::{ty::TyFunctionDecl, CallPath};
@@ -165,10 +165,7 @@ impl AstNode {
                 let arg_t = engines.te().get(p.type_argument.type_id);
                 let arg_t = match &*arg_t {
                     TypeInfo::Unknown => todo!(),
-                    TypeInfo::UnknownGeneric {
-                        name,
-                        trait_constraints,
-                    } => todo!(),
+                    TypeInfo::UnknownGeneric { .. } => todo!(),
                     TypeInfo::Placeholder(_) => todo!(),
                     TypeInfo::TypeParam(_) => todo!(),
                     TypeInfo::StringSlice => todo!(),
@@ -178,27 +175,20 @@ impl AstNode {
                     TypeInfo::Struct(s) => TypeInfo::Struct(s.clone()),
                     TypeInfo::Boolean => todo!(),
                     TypeInfo::Tuple(_) => todo!(),
-                    TypeInfo::ContractCaller { abi_name, address } => todo!(),
-                    TypeInfo::Custom {
-                        qualified_call_path,
-                        type_arguments,
-                        root_type_id,
-                    } => todo!(),
+                    TypeInfo::ContractCaller { .. } => todo!(),
+                    TypeInfo::Custom { .. } => todo!(),
                     TypeInfo::B256 => TypeInfo::B256,
                     TypeInfo::Numeric => todo!(),
                     TypeInfo::Contract => todo!(),
                     TypeInfo::ErrorRecovery(_) => todo!(),
                     TypeInfo::Array(_, _) => todo!(),
-                    TypeInfo::Storage { fields } => todo!(),
+                    TypeInfo::Storage { .. } => todo!(),
                     TypeInfo::RawUntypedPtr => todo!(),
                     TypeInfo::RawUntypedSlice => todo!(),
                     TypeInfo::Ptr(_) => todo!(),
                     TypeInfo::Slice(_) => todo!(),
-                    TypeInfo::Alias { name, ty } => todo!(),
-                    TypeInfo::TraitType {
-                        name,
-                        trait_type_id,
-                    } => todo!(),
+                    TypeInfo::Alias { .. } => todo!(),
+                    TypeInfo::TraitType { .. } => todo!(),
                     TypeInfo::Ref(_) => todo!(),
                 };
                 let tid = engines.te().insert(engines, arg_t, None);
@@ -212,14 +202,14 @@ impl AstNode {
             .collect();
         let type_id = engines.te().insert(engines, TypeInfo::Tuple(types), None);
         Some(TypeArgument {
-            type_id: type_id.clone(),
+            type_id,
             initial_type_id: type_id,
             span: Span::dummy(),
             call_path_tree: None,
         })
     }
 
-    fn decode_script_data(engines: &Engines, args_type: TypeArgument) -> Expression {
+    fn decode_script_data(_engines: &Engines, args_type: TypeArgument) -> Expression {
         Expression {
             kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
                 call_path_binding: TypeBinding {
@@ -241,7 +231,7 @@ impl AstNode {
         decl.parameters
             .iter()
             .enumerate()
-            .map(|(idx, p)| Expression {
+            .map(|(idx, _p)| Expression {
                 kind: ExpressionKind::TupleIndex(TupleIndexExpression {
                     prefix: Box::new(Expression {
                         kind: ExpressionKind::AmbiguousVariableExpression(var.clone()),
@@ -261,7 +251,7 @@ impl AstNode {
         var: BaseIdent,
         decl: &TyFunctionDecl,
     ) -> Vec<Expression> {
-        let args_type = Self::arguments_type(engines, &decl).unwrap();
+        let args_type = Self::arguments_type(engines, decl).unwrap();
         contents.push(AstNode::typed_variable_declaration(
             engines,
             var.clone(),

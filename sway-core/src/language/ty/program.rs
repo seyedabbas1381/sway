@@ -4,7 +4,7 @@ use crate::{
     decl_engine::*,
     fuel_prelude::fuel_tx::StorageSlot,
     language::{
-        parsed::{self, TreeType},
+        parsed::{self},
         ty::*,
         Purity,
     },

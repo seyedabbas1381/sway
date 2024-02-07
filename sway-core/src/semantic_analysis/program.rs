@@ -1,15 +1,14 @@
 use crate::{
-    decl_engine::{self, parsed_engine::ParsedDeclEngineInsert, DeclEngineGet, DeclEngineInsert},
+    decl_engine::{parsed_engine::ParsedDeclEngineInsert, DeclEngineGet},
     language::{
         parsed::{
-            AsmExpression, AsmRegisterDeclaration, AstNode, AstNodeContent, CodeBlock, Declaration,
-            Expression, ExpressionKind, FunctionApplicationExpression, FunctionDeclaration,
-            FunctionDeclarationKind, IfExpression, IntrinsicFunctionExpression, MatchBranch,
-            MatchExpression, MethodApplicationExpression, MethodName, ParseProgram, Scrutinee,
-            SubfieldExpression, TreeType, TupleIndexExpression, VariableDeclaration,
+            AstNode, AstNodeContent, CodeBlock, Declaration, Expression, ExpressionKind,
+            FunctionApplicationExpression, FunctionDeclarationKind, IfExpression,
+            IntrinsicFunctionExpression, MethodApplicationExpression, MethodName, ParseProgram,
+            TreeType, TupleIndexExpression, VariableDeclaration,
         },
-        ty::{self, TyAstNode, TyDecl, TyFunctionDecl, TyModule, TyProgram},
-        AsmOp, AsmRegister, CallPath, Literal, Purity,
+        ty::{self, TyAstNode, TyFunctionDecl, TyModule, TyProgram},
+        CallPath, Literal, Purity,
     },
     metadata::MetadataManager,
     semantic_analysis::{
@@ -22,14 +21,14 @@ use crate::{
 use sway_ast::Intrinsic;
 use sway_error::handler::{ErrorEmitted, Handler};
 use sway_ir::{Context, Module};
-use sway_types::{integer_bits::IntegerBits, BaseIdent, Ident, Span, Spanned};
+use sway_types::{BaseIdent, Ident, Span, Spanned};
 
 use super::{
     TypeCheckAnalysis, TypeCheckAnalysisContext, TypeCheckFinalization,
     TypeCheckFinalizationContext,
 };
 
-fn call_encode(engines: &Engines, arg: Expression) -> Expression {
+fn call_encode(_engines: &Engines, arg: Expression) -> Expression {
     Expression {
         kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
             call_path_binding: TypeBinding {
@@ -71,7 +70,7 @@ fn call_decode_first_param(engines: &Engines) -> Expression {
     }
 }
 
-fn call_decode_second_param(engines: &Engines, args_type: TypeArgument) -> Expression {
+fn call_decode_second_param(_engines: &Engines, args_type: TypeArgument) -> Expression {
     Expression {
         kind: ExpressionKind::FunctionApplication(Box::new(FunctionApplicationExpression {
             call_path_binding: TypeBinding {
@@ -89,7 +88,7 @@ fn call_decode_second_param(engines: &Engines, args_type: TypeArgument) -> Expre
     }
 }
 
-fn call_eq(engines: &Engines, l: Expression, r: Expression) -> Expression {
+fn call_eq(_engines: &Engines, l: Expression, r: Expression) -> Expression {
     Expression {
         kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {
             method_name_binding: TypeBinding {
@@ -139,10 +138,7 @@ fn arguments_type(engines: &Engines, decl: &TyFunctionDecl) -> Option<TypeArgume
             let arg_t = engines.te().get(p.type_argument.type_id);
             let arg_t = match &*arg_t {
                 TypeInfo::Unknown => todo!(),
-                TypeInfo::UnknownGeneric {
-                    name,
-                    trait_constraints,
-                } => todo!(),
+                TypeInfo::UnknownGeneric { .. } => todo!(),
                 TypeInfo::Placeholder(_) => todo!(),
                 TypeInfo::TypeParam(_) => todo!(),
                 TypeInfo::StringSlice => todo!(),
@@ -152,27 +148,20 @@ fn arguments_type(engines: &Engines, decl: &TyFunctionDecl) -> Option<TypeArgume
                 TypeInfo::Struct(s) => TypeInfo::Struct(s.clone()),
                 TypeInfo::Boolean => todo!(),
                 TypeInfo::Tuple(_) => todo!(),
-                TypeInfo::ContractCaller { abi_name, address } => todo!(),
-                TypeInfo::Custom {
-                    qualified_call_path,
-                    type_arguments,
-                    root_type_id,
-                } => todo!(),
+                TypeInfo::ContractCaller { .. } => todo!(),
+                TypeInfo::Custom { .. } => todo!(),
                 TypeInfo::B256 => TypeInfo::B256,
                 TypeInfo::Numeric => todo!(),
                 TypeInfo::Contract => todo!(),
                 TypeInfo::ErrorRecovery(_) => todo!(),
                 TypeInfo::Array(_, _) => todo!(),
-                TypeInfo::Storage { fields } => todo!(),
+                TypeInfo::Storage { .. } => todo!(),
                 TypeInfo::RawUntypedPtr => todo!(),
                 TypeInfo::RawUntypedSlice => todo!(),
                 TypeInfo::Ptr(_) => todo!(),
                 TypeInfo::Slice(_) => todo!(),
-                TypeInfo::Alias { name, ty } => todo!(),
-                TypeInfo::TraitType {
-                    name,
-                    trait_type_id,
-                } => todo!(),
+                TypeInfo::Alias { .. } => todo!(),
+                TypeInfo::TraitType { .. } => todo!(),
                 TypeInfo::Ref(_) => todo!(),
             };
             let tid = engines.te().insert(engines, arg_t, None);
@@ -186,7 +175,7 @@ fn arguments_type(engines: &Engines, decl: &TyFunctionDecl) -> Option<TypeArgume
         .collect();
     let type_id = engines.te().insert(engines, TypeInfo::Tuple(types), None);
     Some(TypeArgument {
-        type_id: type_id.clone(),
+        type_id,
         initial_type_id: type_id,
         span: Span::dummy(),
         call_path_tree: None,
@@ -197,7 +186,7 @@ fn arguments_as_expressions(name: BaseIdent, decl: &TyFunctionDecl) -> Vec<Expre
     decl.parameters
         .iter()
         .enumerate()
-        .map(|(idx, p)| Expression {
+        .map(|(idx, _)| Expression {
             kind: ExpressionKind::TupleIndex(TupleIndexExpression {
                 prefix: Box::new(Expression {
                     kind: ExpressionKind::AmbiguousVariableExpression(name.clone()),
@@ -272,7 +261,7 @@ impl TyProgram {
     ) -> Result<Self, ErrorEmitted> {
         let mut namespace = Namespace::init_root(initial_namespace);
         let mut ctx = TypeCheckContext::from_root(&mut namespace, engines)
-            .with_kind(parsed.kind.clone())
+            .with_kind(parsed.kind)
             .with_experimental_flags(build_config.map(|x| x.experimental));
 
         let ParseProgram { root, kind } = parsed;
@@ -308,7 +297,7 @@ impl TyProgram {
                     engines,
                     &mut contents,
                     result_name.clone(),
-                    &*main_decl,
+                    &main_decl,
                 );
                 AstNode::push_encode_and_return(
                     engines,
@@ -323,7 +312,7 @@ impl TyProgram {
                 gen_entry_fn(&mut ctx, &mut root, Purity::Pure, contents, unit_type_id)?;
             }
             TreeType::Contract => {
-                let main_decl = main_decl.unwrap();
+                // let main_decl = main_decl.unwrap();
                 let var_decl = ctx.engines.pe().insert(VariableDeclaration {
                     name: Ident::new_no_span("method_name".to_string()),
                     type_ascription: TypeArgument {
@@ -373,7 +362,7 @@ impl TyProgram {
                 for r in all_entries {
                     let decl = engines.de().get(r.id());
                     let args_type = arguments_type(engines, &decl);
-                    let result_type = decl.return_type.clone();
+                    //let result_type = decl.return_type.clone();
                     let args_tuple_name = Ident::new_no_span("args".to_string());
                     let result_name = Ident::new_no_span("result".to_string());
 
@@ -494,7 +483,7 @@ impl TyProgram {
         }
 
         let (kind, declarations, configurables) =
-            Self::validate_root(handler, engines, &root, kind.clone(), package_name)?;
+            Self::validate_root(handler, engines, &root, *kind, package_name)?;
 
         let program = TyProgram {
             kind,

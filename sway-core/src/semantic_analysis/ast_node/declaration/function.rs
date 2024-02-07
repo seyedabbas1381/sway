@@ -361,6 +361,7 @@ fn test_function_selector_behavior() {
         is_contract_call: false,
         where_clause: vec![],
         is_trait_method_dummy: false,
+        kind: ty::TyFunctionDeclKind::Default,
     };
 
     let selector_text = decl
@@ -420,6 +421,7 @@ fn test_function_selector_behavior() {
         is_contract_call: false,
         where_clause: vec![],
         is_trait_method_dummy: false,
+        kind: ty::TyFunctionDeclKind::Default,
     };
 
     let selector_text = decl

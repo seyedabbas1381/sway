@@ -4,14 +4,11 @@ use crate::{
     asm_generation::fuel::{
         abstract_instruction_set::AbstractInstructionSet,
         allocated_abstract_instruction_set::AllocatedAbstractInstructionSet,
-        compiler_constants,
-        data_section::{DataSection, Entry},
-        register_sequencer::RegisterSequencer,
+        data_section::DataSection, register_sequencer::RegisterSequencer,
     },
     asm_lang::{
         allocated_ops::{AllocatedOpcode, AllocatedRegister},
-        AllocatedAbstractOp, ConstantRegister, ControlFlowOp, VirtualImmediate12,
-        VirtualImmediate18,
+        AllocatedAbstractOp, ConstantRegister, ControlFlowOp,
     },
 };
 

@@ -7,7 +7,7 @@ use crate::{
             MatchBranch, MatchExpression, MethodApplicationExpression, MethodName, Scrutinee,
             SubfieldExpression,
         },
-        ty::{self, TyAstNode, TyDecl, TyFunctionDeclKind},
+        ty::{self, TyAstNode, TyDecl},
         CallPath, QualifiedCallPath,
     },
     semantic_analysis::{type_check_context::EnforceTypeArguments, TypeCheckContext},

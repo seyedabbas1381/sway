@@ -264,7 +264,7 @@ pub fn get_stored_ptr_values(context: &Context, val: Value) -> Vec<Value> {
             | FuelVmInstruction::WideBinaryOp { result, .. }
             | FuelVmInstruction::WideModularOp { result, .. } => vec![*result],
             FuelVmInstruction::WideCmpOp { .. } => vec![],
-            FuelVmInstruction => vec![],
+            _ => vec![],
         },
     }
 }

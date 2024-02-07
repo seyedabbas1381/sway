@@ -2,7 +2,7 @@ use crate::{
     decl_engine::{DeclId, DeclRefFunction},
     language::{ty, Visibility},
     metadata::MetadataManager,
-    semantic_analysis::{namespace, TypeCheckContext},
+    semantic_analysis::namespace,
     type_system::TypeId,
     types::{LogId, MessageId},
     Engines,
@@ -151,10 +151,10 @@ pub(super) fn compile_contract(
         None,
     )?;
 
-    let names: Vec<_> = declarations
-        .iter()
-        .map(|x| x.friendly_name(engines))
-        .collect();
+    // let names: Vec<_> = declarations
+    //     .iter()
+    //     .map(|x| x.friendly_name(engines))
+    //     .collect();
 
     for decl in abi_entries {
         compile_abi_method(

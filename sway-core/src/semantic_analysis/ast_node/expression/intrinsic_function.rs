@@ -1380,10 +1380,10 @@ fn type_check_smo(
 fn type_check_contract_ret(
     handler: &Handler,
     mut ctx: TypeCheckContext,
-    kind: sway_ast::Intrinsic,
+    _kind: sway_ast::Intrinsic,
     arguments: Vec<Expression>,
-    type_arguments: Vec<TypeArgument>,
-    span: Span,
+    _type_arguments: Vec<TypeArgument>,
+    _span: Span,
 ) -> Result<(ty::TyIntrinsicFunctionKind, TypeId), ErrorEmitted> {
     let type_engine = ctx.engines.te();
     let engines = ctx.engines();
@@ -1442,21 +1442,31 @@ fn type_check_contract_call(
     // }
 
     // Return Type
-    let ptr_type = ctx.engines.te().insert(&ctx.engines, TypeInfo::RawUntypedPtr, None);
+    let ptr_type = ctx
+        .engines
+        .te()
+        .insert(ctx.engines, TypeInfo::RawUntypedPtr, None);
     let ptr_type = TypeArgument {
         type_id: ptr_type,
         initial_type_id: ptr_type,
         span: Span::dummy(),
         call_path_tree: None,
     };
-    let len_type = ctx.engines.te().insert(&ctx.engines, TypeInfo::UnsignedInteger(IntegerBits::SixtyFour), None);
+    let len_type = ctx.engines.te().insert(
+        ctx.engines,
+        TypeInfo::UnsignedInteger(IntegerBits::SixtyFour),
+        None,
+    );
     let len_type = TypeArgument {
         type_id: len_type,
         initial_type_id: len_type,
         span: Span::dummy(),
         call_path_tree: None,
     };
-    let return_type_id = ctx.engines.te().insert(&ctx.engines, TypeInfo::Tuple(vec![ptr_type, len_type]), None);
+    let return_type_id =
+        ctx.engines
+            .te()
+            .insert(ctx.engines, TypeInfo::Tuple(vec![ptr_type, len_type]), None);
 
     // Arguments
     let arguments: Vec<ty::TyExpression> = arguments

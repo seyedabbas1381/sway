@@ -158,7 +158,7 @@ impl<'a> TypeCheckContext<'a> {
             generic_shadowing_mode: self.generic_shadowing_mode,
             help_text: self.help_text,
             purity: self.purity,
-            kind: self.kind.clone(),
+            kind: self.kind,
             engines: self.engines,
             disallow_functions: self.disallow_functions,
             defer_monomorphization: self.defer_monomorphization,
@@ -374,7 +374,7 @@ impl<'a> TypeCheckContext<'a> {
 
     #[allow(dead_code)]
     pub(crate) fn kind(&self) -> TreeType {
-        self.kind.clone()
+        self.kind
     }
 
     pub(crate) fn functions_disallowed(&self) -> bool {
