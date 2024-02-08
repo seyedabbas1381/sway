@@ -154,50 +154,47 @@ impl AstNode {
             return None;
         }
 
-        // if decl.parameters.len() == 1 {
-        //     return Some(decl.parameters[0].type_argument.clone());
-        // }
-
         let types = decl
             .parameters
             .iter()
             .map(|p| {
-                let arg_t = engines.te().get(p.type_argument.type_id);
-                let arg_t = match &*arg_t {
-                    TypeInfo::Unknown => todo!(),
-                    TypeInfo::UnknownGeneric { .. } => todo!(),
-                    TypeInfo::Placeholder(_) => todo!(),
-                    TypeInfo::TypeParam(_) => todo!(),
-                    TypeInfo::StringSlice => todo!(),
-                    TypeInfo::StringArray(_) => todo!(),
-                    TypeInfo::UnsignedInteger(v) => TypeInfo::UnsignedInteger(*v),
-                    TypeInfo::Enum(_) => todo!(),
-                    TypeInfo::Struct(s) => TypeInfo::Struct(s.clone()),
-                    TypeInfo::Boolean => todo!(),
-                    TypeInfo::Tuple(_) => todo!(),
-                    TypeInfo::ContractCaller { .. } => todo!(),
-                    TypeInfo::Custom { .. } => todo!(),
-                    TypeInfo::B256 => TypeInfo::B256,
-                    TypeInfo::Numeric => todo!(),
-                    TypeInfo::Contract => todo!(),
-                    TypeInfo::ErrorRecovery(_) => todo!(),
-                    TypeInfo::Array(_, _) => todo!(),
-                    TypeInfo::Storage { .. } => todo!(),
-                    TypeInfo::RawUntypedPtr => todo!(),
-                    TypeInfo::RawUntypedSlice => todo!(),
-                    TypeInfo::Ptr(_) => todo!(),
-                    TypeInfo::Slice(_) => todo!(),
-                    TypeInfo::Alias { .. } => todo!(),
-                    TypeInfo::TraitType { .. } => todo!(),
-                    TypeInfo::Ref(_) => todo!(),
-                };
-                let tid = engines.te().insert(engines, arg_t, None);
-                TypeArgument {
-                    type_id: tid,
-                    initial_type_id: tid,
-                    span: Span::dummy(),
-                    call_path_tree: None,
-                }
+                p.type_argument.clone()
+                // let arg_t = engines.te().get(p.type_argument.type_id);
+                // let arg_t = match &*arg_t {
+                //     TypeInfo::Unknown => todo!(),
+                //     TypeInfo::UnknownGeneric { .. } => todo!(),
+                //     TypeInfo::Placeholder(_) => todo!(),
+                //     TypeInfo::TypeParam(_) => todo!(),
+                //     TypeInfo::StringSlice => todo!(),
+                //     TypeInfo::StringArray(_) => todo!(),
+                //     TypeInfo::UnsignedInteger(v) => TypeInfo::UnsignedInteger(*v),
+                //     TypeInfo::Enum(_) => todo!(),
+                //     TypeInfo::Struct(s) => TypeInfo::Struct(s.clone()),
+                //     TypeInfo::Boolean => todo!(),
+                //     TypeInfo::Tuple(_) => todo!(),
+                //     TypeInfo::ContractCaller { .. } => todo!(),
+                //     TypeInfo::Custom { .. } => todo!(),
+                //     TypeInfo::B256 => TypeInfo::B256,
+                //     TypeInfo::Numeric => todo!(),
+                //     TypeInfo::Contract => todo!(),
+                //     TypeInfo::ErrorRecovery(_) => todo!(),
+                //     TypeInfo::Array(_, _) => todo!(),
+                //     TypeInfo::Storage { .. } => todo!(),
+                //     TypeInfo::RawUntypedPtr => todo!(),
+                //     TypeInfo::RawUntypedSlice => todo!(),
+                //     TypeInfo::Ptr(_) => todo!(),
+                //     TypeInfo::Slice(_) => todo!(),
+                //     TypeInfo::Alias { .. } => todo!(),
+                //     TypeInfo::TraitType { .. } => todo!(),
+                //     TypeInfo::Ref(_) => todo!(),
+                // };
+                // let tid = engines.te().insert(engines, arg_t, None);
+                // TypeArgument {
+                //     type_id: tid,
+                //     initial_type_id: tid,
+                //     span: Span::dummy(),
+                //     call_path_tree: None,
+                // }
             })
             .collect();
         let type_id = engines.te().insert(engines, TypeInfo::Tuple(types), None);
@@ -251,16 +248,19 @@ impl AstNode {
         var: BaseIdent,
         decl: &TyFunctionDecl,
     ) -> Vec<Expression> {
-        let args_type = Self::arguments_type(engines, decl).unwrap();
-        contents.push(AstNode::typed_variable_declaration(
-            engines,
-            var.clone(),
-            args_type.clone(),
-            Self::decode_script_data(engines, args_type),
-            false,
-        ));
+        if let Some(args_type) = Self::arguments_type(engines, decl) {
+            contents.push(AstNode::typed_variable_declaration(
+                engines,
+                var.clone(),
+                args_type.clone(),
+                Self::decode_script_data(engines, args_type),
+                false,
+            ));
 
-        Self::arguments_as_expressions(var, decl)
+            Self::arguments_as_expressions(var, decl)
+        } else {
+            vec![]
+        }
     }
 
     pub fn push_encode_and_return(

@@ -12,6 +12,7 @@ use colored::*;
 use core::fmt;
 use forc_pkg::BuildProfile;
 use fuel_vm::fuel_tx;
+use fuel_vm::fuel_types::canonical::Serialize;
 use fuel_vm::prelude::*;
 use regex::Regex;
 use std::collections::HashSet;
@@ -239,10 +240,18 @@ impl TestContext {
 
         match category {
             TestCategory::Runs => {
-                let res = match expected_result {
-                    Some(TestResult::Return(_))
-                    | Some(TestResult::ReturnData(_))
-                    | Some(TestResult::Revert(_)) => expected_result.unwrap(),
+                let expected_result = match expected_result {
+                    Some(TestResult::Return(v)) => {
+                        // With the new encoding, `Return` is actually `ReturnData`
+                        if context.run_config.experimental.new_encoding {
+                            TestResult::ReturnData(v.to_bytes())
+                        } else {
+                            expected_result.unwrap()
+                        }
+                    }
+                    Some(TestResult::ReturnData(_)) | Some(TestResult::Revert(_)) => {
+                        expected_result.unwrap()
+                    }
 
                     _ => panic!(
                         "For {name}:\n\
@@ -273,7 +282,7 @@ impl TestContext {
                 }
 
                 let result = harness::runs_in_vm(compiled.clone(), script_data, witness_data)?;
-                let result = match result {
+                let actual_result = match result {
                     harness::VMExecutionResult::Fuel(state, receipts) => {
                         print_receipts(output, &receipts);
                         match state {
@@ -316,9 +325,9 @@ impl TestContext {
                     }
                 };
 
-                if result != res {
+                if actual_result != expected_result {
                     Err(anyhow::Error::msg(format!(
-                        "expected: {res:?}\nactual: {result:?}"
+                        "expected: {expected_result:?}\nactual: {actual_result:?}"
                     )))
                 } else {
                     if validate_abi {

@@ -567,15 +567,39 @@ pub trait AbiDecode {
     fn abi_decode(ref mut buffer: BufferReader) -> Self;
 }
 
+impl AbiDecode for b256 {
+    fn abi_decode(ref mut buffer: BufferReader) -> b256 {
+        buffer.read::<b256>()
+    }
+}
+
+impl AbiDecode for u256 {
+    fn abi_decode(ref mut buffer: BufferReader) -> u256 {
+        buffer.read::<u256>()
+    }
+}
+
 impl AbiDecode for u64 {
     fn abi_decode(ref mut buffer: BufferReader) -> u64 {
         buffer.read::<u64>()
     }
 }
 
-impl AbiDecode for b256 {
-    fn abi_decode(ref mut buffer: BufferReader) -> b256 {
-        buffer.read::<b256>()
+impl AbiDecode for u32 {
+    fn abi_decode(ref mut buffer: BufferReader) -> u32 {
+        buffer.read::<u32>()
+    }
+}
+
+impl AbiDecode for u16 {
+    fn abi_decode(ref mut buffer: BufferReader) -> u16 {
+        buffer.read::<u16>()
+    }
+}
+
+impl AbiDecode for u8 {
+    fn abi_decode(ref mut buffer: BufferReader) -> u8 {
+        buffer.read::<u8>()
     }
 }
 
@@ -586,6 +610,38 @@ impl AbiDecode for str {
         asm(s: (data.ptr(), len)) {
             s: str
         }
+    }
+}
+
+impl<T> AbiDecode for [T; 0]
+where
+    T: AbiDecode
+{
+    fn abi_decode(ref mut _buffer: BufferReader) -> [T; 0] {
+        []
+    }
+}
+
+impl<T> AbiDecode for [T; 1]
+where
+    T: AbiDecode
+{
+    fn abi_decode(ref mut buffer: BufferReader) -> [T; 1] {
+        [
+            T::abi_decode(buffer)
+        ]
+    }
+}
+
+impl<T> AbiDecode for [T; 2]
+where
+    T: AbiDecode
+{
+    fn abi_decode(ref mut buffer: BufferReader) -> [T; 2] {
+        [
+            T::abi_decode(buffer),
+            T::abi_decode(buffer)
+        ]
     }
 }
 

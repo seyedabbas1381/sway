@@ -1,21 +1,11 @@
 {
   "configurables": [],
+  "encoding": "1",
   "functions": [
     {
       "attributes": null,
-      "inputs": [
-        {
-          "name": "baba",
-          "type": 0,
-          "typeArguments": null
-        },
-        {
-          "name": "keke",
-          "type": 0,
-          "typeArguments": null
-        }
-      ],
-      "name": "main",
+      "inputs": [],
+      "name": "__entry",
       "output": {
         "name": "",
         "type": 0,
@@ -27,8 +17,8 @@
   "messagesTypes": [],
   "types": [
     {
-      "components": null,
-      "type": "u64",
+      "components": [],
+      "type": "()",
       "typeId": 0,
       "typeParameters": null
     }
