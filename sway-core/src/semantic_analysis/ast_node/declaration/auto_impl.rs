@@ -359,7 +359,6 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
             unit_type_id,
             engines,
         );
-        dbg!("auto_impl_abi_encode");
         self.type_check_impl(type_parameters, implementing_for, fn_trait_item, engines)
     }
 
@@ -586,52 +585,52 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
             })
             .collect();
 
-        let abi_decode_contents = vec![
-            AstNode::return_node(
-                Expression {
-                    kind: ExpressionKind::Struct(Box::new(StructExpression {
-                        call_path_binding: TypeBinding {
-                            inner: CallPath {
-                                prefixes: vec![],
-                                suffix: Ident::new_no_span("Self".into()),
-                                is_absolute: false,
-                            },
-                            type_arguments: TypeArgs::Regular(vec![]),
-                            span: Span::dummy(),
-                        },
-                        fields: struct_decl
-                            .fields
-                            .iter()
-                            .map(|x| StructExpressionField {
-                                name: x.name.clone(),
-                                value: Self::call_abi_decode(engines, x.type_argument.type_id),
-                            })
-                            .collect(),
-                    })),
+        let abi_decode_contents = vec![AstNode::return_node(Expression {
+            kind: ExpressionKind::Struct(Box::new(StructExpression {
+                call_path_binding: TypeBinding {
+                    inner: CallPath {
+                        prefixes: vec![],
+                        suffix: Ident::new_no_span("Self".into()),
+                        is_absolute: false,
+                    },
+                    type_arguments: TypeArgs::Regular(vec![]),
                     span: Span::dummy(),
-                }
-            )
-        ];
+                },
+                fields: struct_decl
+                    .fields
+                    .iter()
+                    .map(|x| StructExpressionField {
+                        name: x.name.clone(),
+                        value: Self::call_abi_decode(engines, x.type_argument.type_id),
+                    })
+                    .collect(),
+            })),
+            span: Span::dummy(),
+        })];
 
         (
-            impl_encode.then(|| {
-                self.auto_impl_abi_encode(
-                    &struct_decl.type_parameters,
-                    struct_decl.call_path.suffix.clone(),
-                    unit_type_id,
-                    engines,
-                    abi_encode_contents,
-                )
-            }).flatten(),
-            impl_decode.then(|| {
-                self.auto_impl_abi_decode(
-                    &struct_decl.type_parameters,
-                    struct_decl.call_path.suffix.clone(),
-                    unit_type_id,
-                    engines,
-                    abi_decode_contents,
-                )
-            }).flatten(),
+            impl_encode
+                .then(|| {
+                    self.auto_impl_abi_encode(
+                        &struct_decl.type_parameters,
+                        struct_decl.call_path.suffix.clone(),
+                        unit_type_id,
+                        engines,
+                        abi_encode_contents,
+                    )
+                })
+                .flatten(),
+            impl_decode
+                .then(|| {
+                    self.auto_impl_abi_decode(
+                        &struct_decl.type_parameters,
+                        struct_decl.call_path.suffix.clone(),
+                        unit_type_id,
+                        engines,
+                        abi_decode_contents,
+                    )
+                })
+                .flatten(),
         )
     }
 
@@ -733,8 +732,6 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
 
         let enum_decl_ref = decl.get_enum_decl_ref().unwrap();
         let enum_decl = self.ctx.engines().de().get(enum_decl_ref.id());
-
-        dbg!(enum_decl.name());
 
         if !self.import_core_codec() {
             return (None, None);
@@ -944,7 +941,7 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
                                                             ),
                                                             span: Span::dummy(),
                                                         }),
-                                                        suffix: dbg!(variant.name.clone()),
+                                                        suffix: variant.name.clone(),
                                                     },
                                                     is_absolute: false,
                                                 },
@@ -968,24 +965,28 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
         ];
 
         (
-            impl_encode.then(||{
-                self.auto_impl_abi_encode(
-                    &enum_decl.type_parameters,
-                    enum_decl.call_path.suffix.clone(),
-                    unit_type_id,
-                    engines,
-                    abi_encode_contents,
-                )
-            }).flatten(),
-            impl_decode.then(|| {
-                self.auto_impl_abi_decode(
-                    &enum_decl.type_parameters,
-                    enum_decl.call_path.suffix.clone(),
-                    unit_type_id,
-                    engines,
-                    abi_decode_contents,
-                )
-            }).flatten(),
+            impl_encode
+                .then(|| {
+                    self.auto_impl_abi_encode(
+                        &enum_decl.type_parameters,
+                        enum_decl.call_path.suffix.clone(),
+                        unit_type_id,
+                        engines,
+                        abi_encode_contents,
+                    )
+                })
+                .flatten(),
+            impl_decode
+                .then(|| {
+                    self.auto_impl_abi_decode(
+                        &enum_decl.type_parameters,
+                        enum_decl.call_path.suffix.clone(),
+                        unit_type_id,
+                        engines,
+                        abi_decode_contents,
+                    )
+                })
+                .flatten(),
         )
     }
 

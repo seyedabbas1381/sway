@@ -329,17 +329,35 @@ pub(crate) async fn compile_and_run_unit_tests(
     .await
 }
 
-pub(crate) fn test_json_abi(file_name: &str, built_package: &BuiltPackage) -> Result<()> {
+pub(crate) fn test_json_abi(
+    file_name: &str,
+    built_package: &BuiltPackage,
+    experimental_new_encoding: bool,
+    update_output_files: bool,
+) -> Result<()> {
     emit_json_abi(file_name, built_package)?;
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let oracle_path = format!(
-        "{}/src/e2e_vm_tests/test_programs/{}/{}",
-        manifest_dir, file_name, "json_abi_oracle.json"
-    );
+    let oracle_path = if experimental_new_encoding {
+        format!(
+            "{}/src/e2e_vm_tests/test_programs/{}/{}",
+            manifest_dir, file_name, "json_abi_oracle_new_encoding.json"
+        )
+    } else {
+        format!(
+            "{}/src/e2e_vm_tests/test_programs/{}/{}",
+            manifest_dir, file_name, "json_abi_oracle.json"
+        )
+    };
     let output_path = format!(
         "{}/src/e2e_vm_tests/test_programs/{}/{}",
         manifest_dir, file_name, "json_abi_output.json"
     );
+
+    // Update the oracle failing silently
+    if update_output_files {
+        let _ = std::fs::copy(&output_path, &oracle_path);
+    }
+
     if fs::metadata(oracle_path.clone()).is_err() {
         bail!("JSON ABI oracle file does not exist for this test.");
     }
@@ -347,11 +365,11 @@ pub(crate) fn test_json_abi(file_name: &str, built_package: &BuiltPackage) -> Re
         bail!("JSON ABI output file does not exist for this test.");
     }
     let oracle_contents =
-        fs::read_to_string(oracle_path).expect("Something went wrong reading the file.");
+        fs::read_to_string(&oracle_path).expect("Something went wrong reading the file.");
     let output_contents =
-        fs::read_to_string(output_path).expect("Something went wrong reading the file.");
+        fs::read_to_string(&output_path).expect("Something went wrong reading the file.");
     if oracle_contents != output_contents {
-        println!("Mismatched ABI JSON output.");
+        println!("Mismatched ABI JSON output [{oracle_path}] versus [{output_path}]",);
         println!(
             "{}",
             prettydiff::diff_lines(&oracle_contents, &output_contents)

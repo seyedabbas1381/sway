@@ -44,17 +44,15 @@ impl Expression {
         Expression {
             kind: ExpressionKind::IntrinsicFunction(IntrinsicFunctionExpression {
                 name: Ident::new_no_span("__revert".into()),
-                kind_binding: TypeBinding { 
-                    inner: Intrinsic::Revert, 
-                    type_arguments: TypeArgs::Regular(vec![]), 
-                    span: Span::dummy()
+                kind_binding: TypeBinding {
+                    inner: Intrinsic::Revert,
+                    type_arguments: TypeArgs::Regular(vec![]),
+                    span: Span::dummy(),
                 },
-                arguments: vec![
-                    Expression {
-                        kind: ExpressionKind::Literal(Literal::U64(value)),
-                        span: Span::dummy()
-                    }
-                ],
+                arguments: vec![Expression {
+                    kind: ExpressionKind::Literal(Literal::U64(value)),
+                    span: Span::dummy(),
+                }],
             }),
             span: Span::dummy(),
         }
@@ -102,10 +100,7 @@ impl Expression {
         }
     }
 
-    pub fn call_method(
-        method_name: BaseIdent,
-        mut arguments: Vec<Expression>,
-    ) -> Self {
+    pub fn call_method(method_name: BaseIdent, mut arguments: Vec<Expression>) -> Self {
         Expression {
             kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {
                 method_name_binding: TypeBinding {
@@ -128,17 +123,17 @@ impl Expression {
         Expression {
             kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {
                 method_name_binding: TypeBinding {
-                    inner: MethodName::FromType { 
-                        call_path_binding: TypeBinding { 
+                    inner: MethodName::FromType {
+                        call_path_binding: TypeBinding {
                             inner: CallPath {
                                 prefixes: vec![],
                                 suffix,
                                 is_absolute: false,
-                            }, 
+                            },
                             type_arguments: TypeArgs::Regular(vec![]),
-                            span: Span::dummy()
-                        }, 
-                        method_name
+                            span: Span::dummy(),
+                        },
+                        method_name,
                     },
                     type_arguments: TypeArgs::Regular(vec![]),
                     span: Span::dummy(),

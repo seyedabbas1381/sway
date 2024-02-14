@@ -18,7 +18,18 @@ struct OpName {
 }
 
 fn main(ops: [(OpName, SignedNum); 2]) -> u64 {
-    
+    __log(ops);
+    assert(eq_str_3(ops[0].0.val, "set"));
+    assert(match ops[0].1 {
+        SignedNum::Positive(n) => n,
+        _ => revert(1),
+    } == 1338);
+
+    assert(eq_str_3(ops[1].0.val, "add"));
+    assert(match ops[1].1 {
+        SignedNum::Negative(n) => n,
+        _ => revert(2),
+    } == 1);
 
     1
 }

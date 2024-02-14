@@ -1838,16 +1838,26 @@ impl<'eng> FnCompiler<'eng> {
         // cache, to uniquely identify a function instance, is the span and the type IDs of any
         // args and type parameters.  It's using the Sway types rather than IR types, which would
         // be more accurate but also more fiddly.
-        let fn_key = (
-            callee.span(),
-            callee
-                .parameters
-                .iter()
-                .map(|p| p.type_argument.type_id)
-                .collect(),
-            callee.type_parameters.iter().map(|tp| tp.type_id).collect(),
-        );
-        let new_callee = match self.recreated_fns.get(&fn_key).copied() {
+
+        let (fn_key, item) = if !callee.span().as_str().is_empty() {
+            let fn_key = (
+                callee.span(),
+                callee
+                    .parameters
+                    .iter()
+                    .map(|p| p.type_argument.type_id)
+                    .collect(),
+                callee.type_parameters.iter().map(|tp| tp.type_id).collect(),
+            );
+            (
+                Some(fn_key.clone()),
+                self.recreated_fns.get(&fn_key).copied(),
+            )
+        } else {
+            (None, None)
+        };
+
+        let new_callee = match item {
             Some(func) => func,
             None => {
                 let callee_fn_decl = ty::TyFunctionDecl {
@@ -1874,7 +1884,11 @@ impl<'eng> FnCompiler<'eng> {
                 )
                 .map_err(|mut x| x.pop().unwrap())?
                 .unwrap();
-                self.recreated_fns.insert(fn_key, new_func);
+
+                if let Some(fn_key) = fn_key {
+                    self.recreated_fns.insert(fn_key, new_func);
+                }
+
                 new_func
             }
         };

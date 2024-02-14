@@ -497,6 +497,12 @@ fn item_fn_to_function_declaration(
             }
         }
     };
+    let kind = if item_fn.fn_signature.name.as_str() == "main" {
+        FunctionDeclarationKind::Entry
+    } else {
+        FunctionDeclarationKind::Default
+    };
+
     let fn_decl = FunctionDeclaration {
         purity: get_attributed_purity(context, handler, &attributes)?,
         attributes,
@@ -528,7 +534,7 @@ fn item_fn_to_function_declaration(
             })
             .transpose()?
             .unwrap_or(vec![]),
-        kind: FunctionDeclarationKind::Default,
+        kind,
     };
     let decl_id = engines.pe().insert(fn_decl);
     Ok(decl_id)

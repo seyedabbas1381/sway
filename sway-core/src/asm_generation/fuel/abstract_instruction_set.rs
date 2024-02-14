@@ -156,6 +156,7 @@ impl AbstractInstructionSet {
                 })
                 .collect::<Vec<_>>()
                 .join(", ");
+            println!("{}", self.to_string()); //TODO remove
             Err(CompileError::InternalOwned(
                 format!("Program erroneously uses uninitialized virtual registers: {bad_regs}"),
                 Span::dummy(),

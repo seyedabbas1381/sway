@@ -179,49 +179,16 @@ impl AstNode {
             return None;
         }
 
-        let types = decl
+        let types: Vec<_> = decl
             .parameters
             .iter()
-            .map(|p| {
-                p.type_argument.clone()
-                // let arg_t = engines.te().get(p.type_argument.type_id);
-                // let arg_t = match &*arg_t {
-                //     TypeInfo::Unknown => todo!(),
-                //     TypeInfo::UnknownGeneric { .. } => todo!(),
-                //     TypeInfo::Placeholder(_) => todo!(),
-                //     TypeInfo::TypeParam(_) => todo!(),
-                //     TypeInfo::StringSlice => todo!(),
-                //     TypeInfo::StringArray(_) => todo!(),
-                //     TypeInfo::UnsignedInteger(v) => TypeInfo::UnsignedInteger(*v),
-                //     TypeInfo::Enum(_) => todo!(),
-                //     TypeInfo::Struct(s) => TypeInfo::Struct(s.clone()),
-                //     TypeInfo::Boolean => todo!(),
-                //     TypeInfo::Tuple(_) => todo!(),
-                //     TypeInfo::ContractCaller { .. } => todo!(),
-                //     TypeInfo::Custom { .. } => todo!(),
-                //     TypeInfo::B256 => TypeInfo::B256,
-                //     TypeInfo::Numeric => todo!(),
-                //     TypeInfo::Contract => todo!(),
-                //     TypeInfo::ErrorRecovery(_) => todo!(),
-                //     TypeInfo::Array(_, _) => todo!(),
-                //     TypeInfo::Storage { .. } => todo!(),
-                //     TypeInfo::RawUntypedPtr => todo!(),
-                //     TypeInfo::RawUntypedSlice => todo!(),
-                //     TypeInfo::Ptr(_) => todo!(),
-                //     TypeInfo::Slice(_) => todo!(),
-                //     TypeInfo::Alias { .. } => todo!(),
-                //     TypeInfo::TraitType { .. } => todo!(),
-                //     TypeInfo::Ref(_) => todo!(),
-                // };
-                // let tid = engines.te().insert(engines, arg_t, None);
-                // TypeArgument {
-                //     type_id: tid,
-                //     initial_type_id: tid,
-                //     span: Span::dummy(),
-                //     call_path_tree: None,
-                // }
-            })
+            .map(|p| p.type_argument.clone())
             .collect();
+
+        if types.len() == 1 {
+            return types.into_iter().next();
+        }
+
         let type_id = engines.te().insert(engines, TypeInfo::Tuple(types), None);
         Some(TypeArgument {
             type_id,
@@ -250,21 +217,29 @@ impl AstNode {
     }
 
     fn arguments_as_expressions(var: BaseIdent, decl: &TyFunctionDecl) -> Vec<Expression> {
-        decl.parameters
-            .iter()
-            .enumerate()
-            .map(|(idx, _p)| Expression {
-                kind: ExpressionKind::TupleIndex(TupleIndexExpression {
-                    prefix: Box::new(Expression {
-                        kind: ExpressionKind::AmbiguousVariableExpression(var.clone()),
-                        span: Span::dummy(),
+        if decl.parameters.len() == 1 {
+            decl.parameters
+                .iter()
+                .enumerate()
+                .map(|(idx, _p)| Expression::ambiguous_variable_expression(var.clone()))
+                .collect()
+        } else {
+            decl.parameters
+                .iter()
+                .enumerate()
+                .map(|(idx, _p)| Expression {
+                    kind: ExpressionKind::TupleIndex(TupleIndexExpression {
+                        prefix: Box::new(Expression {
+                            kind: ExpressionKind::AmbiguousVariableExpression(var.clone()),
+                            span: Span::dummy(),
+                        }),
+                        index: idx,
+                        index_span: Span::dummy(),
                     }),
-                    index: idx,
-                    index_span: Span::dummy(),
-                }),
-                span: Span::dummy(),
-            })
-            .collect()
+                    span: Span::dummy(),
+                })
+                .collect()
+        }
     }
 
     pub fn push_decode_script_data_as_fn_args(

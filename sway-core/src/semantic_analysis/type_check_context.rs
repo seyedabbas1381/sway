@@ -1460,12 +1460,6 @@ impl<'a> TypeCheckContext<'a> {
     where
         T: MonomorphizeHelper + SubstTypes,
     {
-        if value.name().as_str() == "abi_decode" {
-            dbg!(call_site_span.as_str());
-            let v = value.type_parameters().iter().map(|x| x.name_ident.clone()).collect::<Vec<_>>(); 
-            dbg!(v);
-            dbg!(&type_arguments);
-        }
         let type_mapping = self.prepare_type_subst_map_for_monomorphize(
             handler,
             value,

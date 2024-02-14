@@ -306,7 +306,7 @@ pub fn register_known_passes(pm: &mut PassManager) {
     pm.register(create_module_printer_pass());
     pm.register(create_module_verifier_pass());
     // Optimization passes.
-    pm.register(create_fn_dedup_pass());
+    // pm.register(create_fn_dedup_pass());
     pm.register(create_mem2reg_pass());
     pm.register(create_sroa_pass());
     pm.register(create_inline_in_module_pass());

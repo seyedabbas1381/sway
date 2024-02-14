@@ -487,8 +487,6 @@ pub(crate) fn type_check_method_application(
         deferred_monomorphization: ctx.defer_monomorphization(),
     };
 
-    dbg!(engines.help_out(&fn_app));
-
     let mut exp = ty::TyExpression {
         expression: fn_app.clone(),
         return_type: method.return_type.type_id,
@@ -696,8 +694,6 @@ pub(crate) fn monomorphize_method_application(
         let decl_engine = ctx.engines.de();
         let type_engine = ctx.engines.te();
         let engines = ctx.engines();
-
-        dbg!(fn_ref.name(), &type_binding);
 
         *fn_ref = monomorphize_method(
             handler,

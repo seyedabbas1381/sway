@@ -11,10 +11,12 @@ pub struct MatchBranch {
 
 impl MatchBranch {
     pub fn catch_all(result: Expression) -> Self {
-        MatchBranch { 
-            scrutinee: Scrutinee::CatchAll { span: Span::dummy() },
+        MatchBranch {
+            scrutinee: Scrutinee::CatchAll {
+                span: Span::dummy(),
+            },
             result,
-            span: Span::dummy()
+            span: Span::dummy(),
         }
     }
 

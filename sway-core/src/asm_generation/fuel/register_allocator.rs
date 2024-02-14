@@ -605,7 +605,6 @@ pub(crate) fn allocate_registers(
     let mut try_count = 0;
     // Try and assign registers. If we fail, spill. Repeat few times.
     let (updated_ops, interference_graph, mut stack) = loop {
-        dbg!(updated_ops_ref);
         match try_color(updated_ops_ref) {
             ColouringResult::Success {
                 updated_ops,
