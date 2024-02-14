@@ -48,6 +48,23 @@ pub struct AstNode {
 }
 
 impl AstNode {
+    pub fn return_node(value: Expression) -> AstNode {
+        AstNode {
+            content: AstNodeContent::Expression(Expression {
+                kind: ExpressionKind::Return(Box::new(value)),
+                span: Span::dummy(),
+            }),
+            span: Span::dummy(),
+        }
+    }
+
+    pub fn match_branch(value: Expression, branches: Vec<MatchBranch>) -> AstNode {
+        AstNode {
+            content: AstNodeContent::Expression(Expression::match_branch(value, branches)),
+            span: Span::dummy(),
+        }
+    }
+
     pub fn variable_declaration(
         engines: &Engines,
         name: BaseIdent,
@@ -87,6 +104,14 @@ impl AstNode {
         });
         AstNode {
             content: AstNodeContent::Declaration(Declaration::VariableDeclaration(var_decl)),
+            span: Span::dummy(),
+        }
+    }
+
+    pub fn call_method(method_name: BaseIdent, arguments: Vec<Expression>) -> Self {
+        let expr = Expression::call_method(method_name, arguments);
+        AstNode {
+            content: AstNodeContent::Expression(expr),
             span: Span::dummy(),
         }
     }

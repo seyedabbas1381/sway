@@ -322,7 +322,7 @@ impl ty::TyModule {
 
         let mut typed_nodes = vec![];
         for node in nodes {
-            let auto_impl_abiencode = match &node.content {
+            let auto_impl_encoding_traits = match &node.content {
                 AstNodeContent::Declaration(Declaration::StructDeclaration(decl_id)) => {
                     let decl = ctx.engines().pe().get_struct(decl_id);
                     all_abiencode_impls.get(&decl.name).is_none()
@@ -338,15 +338,15 @@ impl ty::TyModule {
                 continue;
             };
 
-            match (auto_impl_abiencode, AutoImplAbiEncodeContext::new(&mut ctx)) {
+            match (auto_impl_encoding_traits, AutoImplAbiEncodeContext::new(&mut ctx)) {
                 (true, Some(mut ctx)) => match &node.content {
                     TyAstNodeContent::Declaration(decl @ TyDecl::StructDecl(_))
                     | TyAstNodeContent::Declaration(decl @ TyDecl::EnumDecl(_)) => {
-                        ctx.auto_impl_abi_encode(engines, decl)
+                        ctx.generate(engines, decl);
                     }
-                    _ => None,
+                    _ => {},
                 },
-                _ => None,
+                _ => {},
             };
 
             typed_nodes.push(node);

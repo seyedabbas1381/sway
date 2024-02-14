@@ -613,6 +613,15 @@ impl AbiDecode for str {
     }
 }
 
+impl AbiDecode for str[3] {
+    fn abi_decode(ref mut buffer: BufferReader) -> str[3] {
+        let data = buffer.read_bytes(3);
+        asm(s: data.ptr()) {
+            s: str[3]
+        }
+    }
+}
+
 impl<T> AbiDecode for [T; 0]
 where
     T: AbiDecode

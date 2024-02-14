@@ -6,16 +6,7 @@
 use itertools::Itertools;
 
 use crate::{
-    context::Context,
-    error::IrError,
-    function::Function,
-    instruction::{FuelVmInstruction, InstOp, Predicate},
-    irtype::Type,
-    local_var::LocalVar,
-    metadata::{MetadataIndex, Metadatum},
-    value::{Value, ValueDatum},
-    AnalysisResult, AnalysisResultT, AnalysisResults, BinaryOpKind, Block, BlockArgument,
-    BranchToWithArgs, Module, Pass, PassMutability, ScopedPass, TypeOption, UnaryOpKind,
+    context::Context, error::IrError, function::Function, instruction::{FuelVmInstruction, InstOp, Predicate}, irtype::Type, local_var::LocalVar, metadata::{MetadataIndex, Metadatum}, value::{Value, ValueDatum}, AnalysisResult, AnalysisResultT, AnalysisResults, BinaryOpKind, Block, BlockArgument, BranchToWithArgs, DebugWithContext, Module, Pass, PassMutability, ScopedPass, TypeOption, UnaryOpKind
 };
 
 pub struct ModuleVerifierResult;
@@ -196,6 +187,7 @@ struct InstructionVerifier<'a, 'eng> {
 
 impl<'a, 'eng> InstructionVerifier<'a, 'eng> {
     fn verify_instructions(&self) -> Result<(), IrError> {
+        println!("{}", self.context);
         for ins in self.cur_block.instruction_iter(self.context) {
             let value_content = &self.context.values[ins.0];
             if let ValueDatum::Instruction(instruction) = &value_content.value {
@@ -1027,6 +1019,9 @@ impl<'a, 'eng> InstructionVerifier<'a, 'eng> {
         let dst_ty = self.get_ptr_type(dst_val, IrError::VerifyStoreToNonPointer)?;
         let stored_ty = stored_val.get_type(self.context);
         if self.opt_ty_not_eq(&Some(dst_ty), &stored_ty) {
+            dbg!(dst_ty.as_string(self.context));
+            dbg!(stored_val.get_instruction(self.context).unwrap().parent.get_function(self.context).get_name(self.context));
+            dbg!(stored_val.with_context(self.context));
             dbg!(
                 dst_val.get_instruction(self.context),
                 stored_val.get_instruction(self.context)

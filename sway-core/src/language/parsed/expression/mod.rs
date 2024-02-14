@@ -7,7 +7,7 @@ use crate::{
     },
     language::{parsed::CodeBlock, *},
     type_system::TypeBinding,
-    Engines, TypeArgs, TypeArgument, TypeId,
+    Engines, TypeArgs, TypeArgument, TypeId, TypeInfo,
 };
 use sway_error::handler::ErrorEmitted;
 use sway_types::{ident::Ident, BaseIdent, Span, Spanned};
@@ -30,6 +30,36 @@ pub struct Expression {
 }
 
 impl Expression {
+    pub fn match_branch(value: Expression, branches: Vec<MatchBranch>) -> Self {
+        Expression {
+            kind: ExpressionKind::Match(MatchExpression {
+                value: Box::new(value),
+                branches,
+            }),
+            span: Span::dummy(),
+        }
+    }
+
+    pub fn revert_u64(value: u64) -> Self {
+        Expression {
+            kind: ExpressionKind::IntrinsicFunction(IntrinsicFunctionExpression {
+                name: Ident::new_no_span("__revert".into()),
+                kind_binding: TypeBinding { 
+                    inner: Intrinsic::Revert, 
+                    type_arguments: TypeArgs::Regular(vec![]), 
+                    span: Span::dummy()
+                },
+                arguments: vec![
+                    Expression {
+                        kind: ExpressionKind::Literal(Literal::U64(value)),
+                        span: Span::dummy()
+                    }
+                ],
+            }),
+            span: Span::dummy(),
+        }
+    }
+
     pub fn literal_u64(value: u64) -> Self {
         Expression {
             kind: ExpressionKind::Literal(Literal::U64(value)),
@@ -73,21 +103,43 @@ impl Expression {
     }
 
     pub fn call_method(
-        var_name: BaseIdent,
         method_name: BaseIdent,
         mut arguments: Vec<Expression>,
     ) -> Self {
-        arguments.insert(
-            0,
-            Expression {
-                kind: ExpressionKind::AmbiguousVariableExpression(var_name),
-                span: Span::dummy(),
-            },
-        );
         Expression {
             kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {
                 method_name_binding: TypeBinding {
                     inner: MethodName::FromModule { method_name },
+                    type_arguments: TypeArgs::Regular(vec![]),
+                    span: Span::dummy(),
+                },
+                contract_call_params: vec![],
+                arguments,
+            })),
+            span: Span::dummy(),
+        }
+    }
+
+    pub fn call_associated_function(
+        suffix: (TypeInfo, BaseIdent),
+        method_name: BaseIdent,
+        mut arguments: Vec<Expression>,
+    ) -> Self {
+        Expression {
+            kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {
+                method_name_binding: TypeBinding {
+                    inner: MethodName::FromType { 
+                        call_path_binding: TypeBinding { 
+                            inner: CallPath {
+                                prefixes: vec![],
+                                suffix,
+                                is_absolute: false,
+                            }, 
+                            type_arguments: TypeArgs::Regular(vec![]),
+                            span: Span::dummy()
+                        }, 
+                        method_name
+                    },
                     type_arguments: TypeArgs::Regular(vec![]),
                     span: Span::dummy(),
                 },
@@ -137,6 +189,16 @@ impl Expression {
                     },
                     len,
                 ],
+            }),
+            span: Span::dummy(),
+        }
+    }
+
+    pub fn subfield(prefix: Expression, field_to_access: BaseIdent) -> Self {
+        Expression {
+            kind: ExpressionKind::Subfield(SubfieldExpression {
+                prefix: Box::new(prefix),
+                field_to_access,
             }),
             span: Span::dummy(),
         }

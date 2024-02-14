@@ -605,6 +605,7 @@ pub(crate) fn allocate_registers(
     let mut try_count = 0;
     // Try and assign registers. If we fail, spill. Repeat few times.
     let (updated_ops, interference_graph, mut stack) = loop {
+        dbg!(updated_ops_ref);
         match try_color(updated_ops_ref) {
             ColouringResult::Success {
                 updated_ops,
@@ -707,6 +708,7 @@ fn assign_registers(
 /// and a set of virtual registers to be spilled, insert the actual spills
 /// and return the updated function and the updated stack info.
 fn spill(ops: &[Op], spills: &FxHashSet<VirtualRegister>) -> Vec<Op> {
+    dbg!(ops);
     let mut spilled: Vec<Op> = vec![];
 
     // Attempt to discover the current stack size and base register.
