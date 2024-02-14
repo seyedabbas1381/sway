@@ -240,10 +240,6 @@ fn gen_entry_fn(
         },
     )?);
 
-    let (e, w) = handler.clone().consume();
-    for e in e {
-        dbg!(e.to_string());
-    }
     assert!(!handler.has_errors(), "{:?}", handler);
     assert!(!handler.has_warnings(), "{:?}", handler);
 

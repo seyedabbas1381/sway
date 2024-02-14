@@ -338,18 +338,17 @@ impl ty::TyModule {
                 continue;
             };
 
-            match (
+            if let (true, Some(mut ctx)) = (
                 auto_impl_encoding_traits,
                 AutoImplAbiEncodeContext::new(&mut ctx),
             ) {
-                (true, Some(mut ctx)) => match &node.content {
+                match &node.content {
                     TyAstNodeContent::Declaration(decl @ TyDecl::StructDecl(_))
                     | TyAstNodeContent::Declaration(decl @ TyDecl::EnumDecl(_)) => {
                         ctx.generate(engines, decl);
                     }
                     _ => {}
-                },
-                _ => {}
+                }
             };
 
             typed_nodes.push(node);

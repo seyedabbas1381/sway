@@ -621,12 +621,12 @@ pub async fn run(filter_config: &FilterConfig, run_config: &RunConfig) -> Result
             .collect();
     }
 
-    // let cur_profile = if run_config.release {
-    //     BuildProfile::RELEASE
-    // } else {
-    //     BuildProfile::DEBUG
-    // };
-    // tests.retain(|t| !t.unsupported_profiles.contains(&cur_profile));
+    let cur_profile = if run_config.release {
+        BuildProfile::RELEASE
+    } else {
+        BuildProfile::DEBUG
+    };
+    tests.retain(|t| !t.unsupported_profiles.contains(&cur_profile));
 
     // Run tests
     let context = TestContext {
@@ -831,7 +831,7 @@ fn parse_test_toml(path: &Path) -> Result<TestDescription> {
         TestCategory::Runs | TestCategory::RunsWithContract => {
             let script_data = match toml_content.get("script_data") {
                 Some(toml::Value::String(v)) => {
-                    let decoded = hex::decode(v.replace(" ", ""))
+                    let decoded = hex::decode(v.replace(' ', ""))
                         .map_err(|e| anyhow!("Invalid hex value for 'script_data': {}", e))?;
                     Some(decoded)
                 }
@@ -843,7 +843,7 @@ fn parse_test_toml(path: &Path) -> Result<TestDescription> {
 
             let script_data_new_encoding = match toml_content.get("script_data_new_encoding") {
                 Some(toml::Value::String(v)) => {
-                    let decoded = hex::decode(v.replace(" ", ""))
+                    let decoded = hex::decode(v.replace(' ', ""))
                         .map_err(|e| anyhow!("Invalid hex value for 'script_data': {}", e))?;
                     Some(decoded)
                 }

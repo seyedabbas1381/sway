@@ -100,7 +100,7 @@ impl Expression {
         }
     }
 
-    pub fn call_method(method_name: BaseIdent, mut arguments: Vec<Expression>) -> Self {
+    pub fn call_method(method_name: BaseIdent, arguments: Vec<Expression>) -> Self {
         Expression {
             kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {
                 method_name_binding: TypeBinding {
@@ -118,7 +118,7 @@ impl Expression {
     pub fn call_associated_function(
         suffix: (TypeInfo, BaseIdent),
         method_name: BaseIdent,
-        mut arguments: Vec<Expression>,
+        arguments: Vec<Expression>,
     ) -> Self {
         Expression {
             kind: ExpressionKind::MethodApplication(Box::new(MethodApplicationExpression {

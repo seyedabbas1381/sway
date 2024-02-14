@@ -20,7 +20,6 @@ use sway_error::{
     error::CompileError,
     handler::{ErrorEmitted, Handler},
 };
-use sway_ir::DebugWithContext;
 use sway_types::{constants, integer_bits::IntegerBits, BaseIdent};
 use sway_types::{constants::CONTRACT_CALL_COINS_PARAMETER_NAME, Spanned};
 use sway_types::{Ident, Span};

@@ -1,15 +1,14 @@
 use std::ops::Deref;
 
 use crate::{
-    decl_engine::{parsed_engine::ParsedDeclEngineInsert, DeclEngineGet, DeclRef},
+    decl_engine::{parsed_engine::ParsedDeclEngineInsert, DeclEngineGet},
     language::{
         parsed::{
             AmbiguousPathExpression, AmbiguousSuffix, AstNode, AstNodeContent, CodeBlock,
-            Declaration, DelineatedPathExpression, Expression, ExpressionKind,
-            FunctionApplicationExpression, FunctionDeclaration, FunctionDeclarationKind,
-            FunctionParameter, ImplItem, ImplTrait, MatchBranch, MatchExpression,
-            MethodApplicationExpression, MethodName, Scrutinee, StructExpression,
-            StructExpressionField, SubfieldExpression,
+            Declaration, DelineatedPathExpression, Expression, ExpressionKind, FunctionDeclaration,
+            FunctionDeclarationKind, FunctionParameter, ImplItem, ImplTrait, MatchBranch,
+            MatchExpression, MethodApplicationExpression, MethodName, Scrutinee, StructExpression,
+            StructExpressionField,
         },
         ty::{self, TyAstNode, TyDecl},
         CallPath, Literal, QualifiedCallPath,
@@ -19,7 +18,7 @@ use crate::{
     Engines, TraitConstraint, TypeArgs, TypeArgument, TypeBinding, TypeId, TypeInfo, TypeParameter,
 };
 use sway_error::handler::Handler;
-use sway_types::{integer_bits::IntegerBits, BaseIdent, Ident, Named, Span};
+use sway_types::{integer_bits::IntegerBits, BaseIdent, Ident, Span};
 
 /// Contains all information needed to implement AbiEncode
 pub struct AutoImplAbiEncodeContext<'a, 'b> {
@@ -92,7 +91,7 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
         &mut self,
         type_parameters: &[TypeParameter],
         suffix: BaseIdent,
-        unit_type_id: TypeId,
+        _unit_type_id: TypeId,
         engines: &Engines,
         contents: Vec<AstNode>,
     ) -> Option<TyAstNode> {

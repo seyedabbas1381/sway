@@ -221,7 +221,7 @@ impl AstNode {
             decl.parameters
                 .iter()
                 .enumerate()
-                .map(|(idx, _p)| Expression::ambiguous_variable_expression(var.clone()))
+                .map(|(_, _p)| Expression::ambiguous_variable_expression(var.clone()))
                 .collect()
         } else {
             decl.parameters
