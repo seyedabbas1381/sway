@@ -455,7 +455,8 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
         // skip module "core"
         // Because of ordering, we cannot guarantee auto impl
         // for structs inside "core"
-        if matches!(self.ctx.namespace.root().name.as_ref(), Some(x) if x.as_str() == "core") {
+        if matches!(self.ctx.namespace.root().module.name.as_ref(), Some(x) if x.as_str() == "core")
+        {
             return (false, false);
         }
 
@@ -481,33 +482,6 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
                 return true;
             }
 
-<<<<<<< HEAD
-            let handler = Handler::default();
-            self.ctx
-                .namespace
-                .module_mut()
-                .current_items_mut()
-                .implemented_traits
-                .check_if_trait_constraints_are_satisfied_for_type(
-                    &handler,
-                    field.type_argument.type_id,
-                    &[TraitConstraint {
-                        trait_name: CallPath {
-                            prefixes: vec![
-                                Ident::new_no_span("core".into()),
-                                Ident::new_no_span("codec".into()),
-                            ],
-                            suffix: Ident::new_no_span("AbiEncode".into()),
-                            is_absolute: true,
-                        },
-                        type_arguments: vec![],
-                    }],
-                    &Span::dummy(),
-                    self.ctx.engines,
-                    crate::namespace::TryInsertingTraitImplOnFailure::Yes,
-                )
-                .is_ok()
-=======
             self.ctx.check_type_impls_traits(
                 field.type_argument.type_id,
                 &[TraitConstraint {
@@ -515,7 +489,6 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
                     type_arguments: vec![],
                 }],
             )
->>>>>>> e0e5bea8e (auto impl for AbiDecode)
         });
 
         let all_fields_are_abi_decode = struct_ref.fields.iter().all(|field| {

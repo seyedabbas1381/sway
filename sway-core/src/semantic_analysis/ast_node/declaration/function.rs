@@ -159,32 +159,15 @@ impl ty::TyFunctionDecl {
                     purity: *purity,
                     where_clause: where_clause.clone(),
                     is_trait_method_dummy: false,
+                    kind: match kind {
+                        FunctionDeclarationKind::Default => ty::TyFunctionDeclKind::Default,
+                        FunctionDeclarationKind::Entry => ty::TyFunctionDeclKind::Entry,
+                        FunctionDeclarationKind::Test => ty::TyFunctionDeclKind::Test,
+                    },
                 };
 
-        let function_decl = ty::TyFunctionDecl {
-            name: name.clone(),
-            body: TyCodeBlock::default(),
-            parameters: new_parameters,
-            implementing_type: None,
-            implementing_for_typeid,
-            span: span.clone(),
-            call_path,
-            attributes: attributes.clone(),
-            return_type,
-            type_parameters: new_type_parameters,
-            visibility,
-            is_contract_call,
-            purity: *purity,
-            where_clause: where_clause.clone(),
-            is_trait_method_dummy: false,
-            kind: match kind {
-                FunctionDeclarationKind::Default => ty::TyFunctionDeclKind::Default,
-                FunctionDeclarationKind::Entry => ty::TyFunctionDeclKind::Entry,
-                FunctionDeclarationKind::Test => ty::TyFunctionDeclKind::Test,
-            },
-        };
-
-        Ok(function_decl)
+                Ok(function_decl)
+            })
     }
 
     pub fn type_check_body(
@@ -361,7 +344,6 @@ fn test_function_selector_behavior() {
         is_contract_call: false,
         where_clause: vec![],
         is_trait_method_dummy: false,
-        kind: ty::TyFunctionDeclKind::Default,
     };
 
     let selector_text = decl
@@ -421,7 +403,6 @@ fn test_function_selector_behavior() {
         is_contract_call: false,
         where_clause: vec![],
         is_trait_method_dummy: false,
-        kind: ty::TyFunctionDeclKind::Default,
     };
 
     let selector_text = decl

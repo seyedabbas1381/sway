@@ -189,9 +189,8 @@ impl TyDecl {
 
                 // if this ImplTrait implements a trait and not an ABI,
                 // we insert its methods into the context
-                // otherwise, if it implements an ABI, we do not
-                // insert those since we do not allow calling contract methods
-                // from contract methods
+                // otherwise, if it implements an ABI,
+                // we insert its methods with a prefix
                 let emp_vec = vec![];
                 let impl_trait_items = if let Ok(ty::TyDecl::TraitDecl { .. }) =
                     ctx.namespace.resolve_call_path(
@@ -205,21 +204,25 @@ impl TyDecl {
                     for i in &impl_trait.items {
                         if let ty::TyTraitItem::Fn(f) = i {
                             let decl = engines.de().get(f.id());
-                            let _ = ctx.namespace.insert_symbol(
-                                handler,
-                                Ident::new_no_span(format!(
-                                    "__contract_entry_{}",
-                                    decl.name.clone()
-                                )),
-                                TyDecl::FunctionDecl(FunctionDecl {
-                                    name: decl.name.clone(),
-                                    decl_id: *f.id(),
-                                    subst_list: Template::default(),
-                                    decl_span: f.span(),
-                                }),
-                                ConstShadowingMode::ItemStyle,
-                                GenericShadowingMode::Allow,
-                            );
+                            let _ = ctx
+                                .namespace
+                                .module_mut()
+                                .current_items_mut()
+                                .insert_symbol(
+                                    handler,
+                                    Ident::new_no_span(format!(
+                                        "__contract_entry_{}",
+                                        decl.name.clone()
+                                    )),
+                                    TyDecl::FunctionDecl(FunctionDecl {
+                                        name: decl.name.clone(),
+                                        decl_id: *f.id(),
+                                        subst_list: Template::default(),
+                                        decl_span: f.span(),
+                                    }),
+                                    ConstShadowingMode::ItemStyle,
+                                    GenericShadowingMode::Allow,
+                                );
                         }
                     }
 
