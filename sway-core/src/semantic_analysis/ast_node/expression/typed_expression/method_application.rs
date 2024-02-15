@@ -86,7 +86,7 @@ pub(crate) fn type_check_method_application(
     }
 
     // generate the map of the contract call params
-    let mut untyped_contract_call_params_map = IndexMap::new();
+    let mut untyped_contract_call_params_map = std::collections::HashMap::new();
     let mut contract_call_params_map = IndexMap::new();
     if method.is_contract_call {
         for param_name in &[
