@@ -486,8 +486,14 @@ impl TyProgram {
             }
         }
 
-        let (kind, declarations, configurables) =
-            Self::validate_root(handler, engines, &root, *kind, package_name)?;
+        let (kind, declarations, configurables) = Self::validate_root(
+            handler,
+            engines,
+            &root,
+            *kind,
+            package_name,
+            ctx.experimental,
+        )?;
 
         let program = TyProgram {
             kind,

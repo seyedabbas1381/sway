@@ -92,7 +92,7 @@ pub fn compile_program<'eng>(
             abi_entries,
         } => compile::compile_contract(
             &mut ctx,
-            main_function,
+            main_function.as_ref(),
             abi_entries,
             root.namespace.module(),
             declarations,

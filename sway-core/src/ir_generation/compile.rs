@@ -117,7 +117,7 @@ pub(super) fn compile_predicate(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn compile_contract(
     context: &mut Context,
-    main_function: &DeclId<ty::TyFunctionDecl>,
+    main_function: Option<&DeclId<ty::TyFunctionDecl>>,
     abi_entries: &[DeclId<ty::TyFunctionDecl>],
     namespace: &namespace::Module,
     declarations: &[ty::TyDecl],
@@ -140,21 +140,18 @@ pub(super) fn compile_contract(
     )
     .map_err(|err| vec![err])?;
 
-    compile_entry_function(
-        engines,
-        context,
-        &mut md_mgr,
-        module,
-        main_function,
-        logged_types_map,
-        messages_types_map,
-        None,
-    )?;
-
-    // let names: Vec<_> = declarations
-    //     .iter()
-    //     .map(|x| x.friendly_name(engines))
-    //     .collect();
+    if let Some(main_function) = main_function {
+        compile_entry_function(
+            engines,
+            context,
+            &mut md_mgr,
+            module,
+            main_function,
+            logged_types_map,
+            messages_types_map,
+            None,
+        )?;
+    }
 
     for decl in abi_entries {
         compile_abi_method(

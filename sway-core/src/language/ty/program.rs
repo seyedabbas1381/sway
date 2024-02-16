@@ -3,15 +3,11 @@ use std::sync::Arc;
 use crate::{
     decl_engine::*,
     fuel_prelude::fuel_tx::StorageSlot,
-    language::{
-        parsed::{self},
-        ty::*,
-        Purity,
-    },
+    language::{parsed, ty::*, Purity},
     transform::AllowDeprecatedState,
     type_system::*,
     types::*,
-    Engines,
+    Engines, ExperimentalFlags,
 };
 
 use sway_error::{
@@ -56,6 +52,7 @@ impl TyProgram {
         root: &TyModule,
         kind: parsed::TreeType,
         package_name: &str,
+        experimental: ExperimentalFlags,
     ) -> Result<(TyProgramKind, Vec<TyDecl>, Vec<TyConstantDecl>), ErrorEmitted> {
         // Extract program-kind-specific properties from the root nodes.
 
@@ -72,6 +69,7 @@ impl TyProgram {
                 &submodule.module,
                 parsed::TreeType::Library,
                 package_name,
+                experimental,
             ) {
                 Ok(_) => {}
                 Err(_) => continue,
@@ -234,10 +232,13 @@ impl TyProgram {
                     }
                 }
 
-                assert!(entries.len() == 1);
-
                 TyProgramKind::Contract {
-                    entry_function: entries[0],
+                    entry_function: if experimental.new_encoding {
+                        assert!(entries.len() == 1);
+                        Some(entries[0])
+                    } else {
+                        None
+                    },
                     abi_entries,
                 }
             }
@@ -473,8 +474,10 @@ impl CollectTypesMetadata for TyProgram {
                 abi_entries,
                 entry_function: main_function,
             } => {
-                let entry = decl_engine.get_function(main_function);
-                metadata.append(&mut entry.collect_types_metadata(handler, ctx)?);
+                if let Some(main_function) = main_function {
+                    let entry = decl_engine.get_function(main_function);
+                    metadata.append(&mut entry.collect_types_metadata(handler, ctx)?);
+                }
 
                 for entry in abi_entries.iter() {
                     let entry = decl_engine.get_function(entry);
@@ -533,7 +536,7 @@ impl CollectTypesMetadata for TyProgram {
 #[derive(Clone, Debug)]
 pub enum TyProgramKind {
     Contract {
-        entry_function: DeclId<TyFunctionDecl>,
+        entry_function: Option<DeclId<TyFunctionDecl>>,
         abi_entries: Vec<DeclId<TyFunctionDecl>>,
     },
     Library {
