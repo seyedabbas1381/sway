@@ -780,7 +780,13 @@ where
         )
     );
 
-    let (ptr, len) = __contract_call(params.ptr(), coins, asset_id, gas);
+    __contract_call(params.ptr(), coins, asset_id, gas);
+    let ptr = asm() {
+        ret: raw_ptr
+    };
+    let len = asm() {
+        retl: u64
+    };
 
     let mut buffer = BufferReader::from_parts(ptr, len);
     T::abi_decode(buffer)

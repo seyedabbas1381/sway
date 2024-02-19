@@ -579,7 +579,6 @@ fn instruction_to_doc<'a>(
                 ))
             }
             InstOp::ContractCall {
-                return_type,
                 name,
                 params,
                 coins,
@@ -590,9 +589,8 @@ fn instruction_to_doc<'a>(
                 .append(maybe_constant_to_doc(context, md_namer, namer, gas))
                 .append(Doc::line(
                     Doc::text(format!(
-                        "{} = contract_call {} {} {}, {}, {}, {}",
+                        "{} = contract_call {} {}, {}, {}, {}",
                         namer.name(context, ins_value),
-                        return_type.as_string(context),
                         name,
                         namer.name(context, params),
                         namer.name(context, coins),

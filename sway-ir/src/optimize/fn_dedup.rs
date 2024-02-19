@@ -143,10 +143,7 @@ fn hash_fn(context: &Context, function: Function, eq_class: &mut EqClass) -> u64
                     get_localised_id(true_block.block, localised_block_id).hash(state);
                     get_localised_id(false_block.block, localised_block_id).hash(state);
                 }
-                crate::InstOp::ContractCall {
-                    return_type, name, ..
-                } => {
-                    return_type.hash(state);
+                crate::InstOp::ContractCall { name, .. } => {
                     name.hash(state);
                 }
                 crate::InstOp::FuelVm(fuel_vm_inst) => match fuel_vm_inst {

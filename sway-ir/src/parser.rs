@@ -294,7 +294,7 @@ mod ir_builder {
                 = "contract_call" _
                 ty:ast_ty() _ name:id() _
                 params:id() comma() coins:id() comma() asset_id:id() comma() gas:id() _ {
-                    IrAstOperation::ContractCall(ty, name, params, coins, asset_id, gas)
+                    IrAstOperation::ContractCall(name, params, coins, asset_id, gas)
             }
 
             rule op_get_elem_ptr() -> IrAstOperation
@@ -708,7 +708,7 @@ mod ir_builder {
         Cbr(String, String, Vec<String>, String, Vec<String>),
         Cmp(Predicate, String, String),
         Const(IrAstTy, IrAstConst),
-        ContractCall(IrAstTy, String, String, String, String, String),
+        ContractCall(String, String, String, String, String),
         GetElemPtr(String, IrAstTy, Vec<String>),
         GetLocal(String),
         Gtf(String, u64),
@@ -1226,18 +1226,15 @@ mod ir_builder {
                         .as_value(context, ty)
                         .add_metadatum(context, opt_metadata),
                     IrAstOperation::ContractCall(
-                        return_type,
                         name,
                         params,
                         coins,
                         asset_id,
                         gas,
                     ) => {
-                        let ir_ty = return_type.to_ir_type(context);
                         block
                             .append(context)
                             .contract_call(
-                                ir_ty,
                                 name,
                                 *val_map.get(&params).unwrap(),
                                 *val_map.get(&coins).unwrap(),

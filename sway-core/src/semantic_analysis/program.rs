@@ -135,42 +135,7 @@ fn arguments_type(engines: &Engines, decl: &TyFunctionDecl) -> Option<TypeArgume
         .parameters
         .iter()
         .map(|p| {
-            let arg_t = engines.te().get(p.type_argument.type_id);
-            let arg_t = match &*arg_t {
-                TypeInfo::Unknown => todo!(),
-                TypeInfo::UnknownGeneric { .. } => todo!(),
-                TypeInfo::Placeholder(_) => todo!(),
-                TypeInfo::TypeParam(_) => todo!(),
-                TypeInfo::StringSlice => todo!(),
-                TypeInfo::StringArray(_) => todo!(),
-                TypeInfo::UnsignedInteger(v) => TypeInfo::UnsignedInteger(*v),
-                TypeInfo::Enum(_) => todo!(),
-                TypeInfo::Struct(s) => TypeInfo::Struct(s.clone()),
-                TypeInfo::Boolean => todo!(),
-                TypeInfo::Tuple(_) => todo!(),
-                TypeInfo::ContractCaller { .. } => todo!(),
-                TypeInfo::Custom { .. } => todo!(),
-                TypeInfo::B256 => TypeInfo::B256,
-                TypeInfo::Numeric => todo!(),
-                TypeInfo::Contract => todo!(),
-                TypeInfo::ErrorRecovery(_) => todo!(),
-                TypeInfo::Array(_, _) => todo!(),
-                TypeInfo::Storage { .. } => todo!(),
-                TypeInfo::RawUntypedPtr => todo!(),
-                TypeInfo::RawUntypedSlice => todo!(),
-                TypeInfo::Ptr(_) => todo!(),
-                TypeInfo::Slice(_) => todo!(),
-                TypeInfo::Alias { .. } => todo!(),
-                TypeInfo::TraitType { .. } => todo!(),
-                TypeInfo::Ref(_) => todo!(),
-            };
-            let tid = engines.te().insert(engines, arg_t, None);
-            TypeArgument {
-                type_id: tid,
-                initial_type_id: tid,
-                span: Span::dummy(),
-                call_path_tree: None,
-            }
+            p.type_argument.clone()
         })
         .collect();
     let type_id = engines.te().insert(engines, TypeInfo::Tuple(types), None);

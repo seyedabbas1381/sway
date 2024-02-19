@@ -1249,39 +1249,22 @@ impl<'eng> FnCompiler<'eng> {
             }
             Intrinsic::ContractCall => {
                 assert!(type_arguments.is_empty());
-                let return_type = convert_resolved_typeid(
-                    engines.te(),
-                    engines.de(),
-                    context,
-                    &type_arguments[0].type_id,
-                    &type_arguments[0].span,
-                )?;
 
-                // If the returned type is not copy type returns a pointer
-                let ret_is_copy_type = self
-                    .engines
-                    .te()
-                    .get_unaliased(type_arguments[0].type_id)
-                    .is_copy_type();
-                let return_type = if ret_is_copy_type {
-                    return_type
-                } else {
-                    Type::new_ptr(context, return_type)
-                };
-
+                // Contract method arguments
                 let params = return_on_termination_or_extract!(self.compile_expression_to_value(
                     context,
                     md_mgr,
                     &arguments[0]
                 )?);
 
+                // Coins
                 let coins = return_on_termination_or_extract!(self.compile_expression_to_value(
                     context,
                     md_mgr,
                     &arguments[1]
                 )?);
 
-                // asset id
+                // AssetId
                 let b256_ty = Type::get_b256(context);
                 let asset_id = return_on_termination_or_extract!(
                     self.compile_expression_to_value(context, md_mgr, &arguments[2])?
@@ -1297,6 +1280,7 @@ impl<'eng> FnCompiler<'eng> {
                 self.current_block.append(context).store(tmp_val, asset_id);
                 let asset_id = self.current_block.append(context).get_local(tmp_var);
 
+                // Gas
                 let gas = return_on_termination_or_extract!(self.compile_expression_to_value(
                     context,
                     md_mgr,
@@ -1309,7 +1293,6 @@ impl<'eng> FnCompiler<'eng> {
                     .current_block
                     .append(context)
                     .contract_call(
-                        return_type,
                         "SOMETHING".into(),
                         params,
                         coins,
@@ -1317,18 +1300,8 @@ impl<'eng> FnCompiler<'eng> {
                         gas,
                     )
                     .add_metadatum(context, span_md_idx);
-
-                if return_type.is_ptr(context) {
-                    Ok(TerminatorValue::new(
-                        self.current_block
-                            .append(context)
-                            .load(returned_value)
-                            .add_metadatum(context, span_md_idx),
-                        context,
-                    ))
-                } else {
-                    Ok(TerminatorValue::new(returned_value, context))
-                }
+                
+                Ok(TerminatorValue::new(returned_value, context))
             }
             Intrinsic::ContractRet => {
                 let span_md_idx = md_mgr.span_to_md(context, &span);
@@ -1794,7 +1767,6 @@ impl<'eng> FnCompiler<'eng> {
             .current_block
             .append(context)
             .contract_call(
-                return_type,
                 ast_name.to_string(),
                 ra_struct_ptr_val,
                 coins,

@@ -506,14 +506,12 @@ fn inline_instruction(
                 false_block.args.iter().map(|v| map_value(*v)).collect(),
             ),
             InstOp::ContractCall {
-                return_type,
                 name,
                 params,
                 coins,
                 asset_id,
                 gas,
             } => new_block.append(context).contract_call(
-                return_type,
                 name,
                 map_value(params),
                 map_value(coins),

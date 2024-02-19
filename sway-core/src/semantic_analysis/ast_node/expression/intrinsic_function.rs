@@ -1441,32 +1441,10 @@ fn type_check_contract_call(
     //     }));
     // }
 
-    // Return Type
-    let ptr_type = ctx
-        .engines
-        .te()
-        .insert(ctx.engines, TypeInfo::RawUntypedPtr, None);
-    let ptr_type = TypeArgument {
-        type_id: ptr_type,
-        initial_type_id: ptr_type,
-        span: Span::dummy(),
-        call_path_tree: None,
-    };
-    let len_type = ctx.engines.te().insert(
-        ctx.engines,
-        TypeInfo::UnsignedInteger(IntegerBits::SixtyFour),
-        None,
-    );
-    let len_type = TypeArgument {
-        type_id: len_type,
-        initial_type_id: len_type,
-        span: Span::dummy(),
-        call_path_tree: None,
-    };
     let return_type_id =
         ctx.engines
             .te()
-            .insert(ctx.engines, TypeInfo::Tuple(vec![ptr_type, len_type]), None);
+            .insert(ctx.engines, TypeInfo::Tuple(vec![]), None);
 
     // Arguments
     let arguments: Vec<ty::TyExpression> = arguments
