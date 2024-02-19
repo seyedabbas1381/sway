@@ -603,6 +603,12 @@ impl AbiDecode for u8 {
     }
 }
 
+impl AbiDecode for bool {
+    fn abi_decode(ref mut buffer: BufferReader) -> bool {
+        buffer.read::<bool>()
+    }
+}
+
 impl AbiDecode for str {
     fn abi_decode(ref mut buffer: BufferReader) -> str {
         let len = u64::abi_decode(buffer);
@@ -613,11 +619,47 @@ impl AbiDecode for str {
     }
 }
 
+impl AbiDecode for str[1] {
+    fn abi_decode(ref mut buffer: BufferReader) -> str[1] {
+        let data = buffer.read_bytes(1);
+        asm(s: data.ptr()) {
+            s: str[1]
+        }
+    }
+}
+
+impl AbiDecode for str[2] {
+    fn abi_decode(ref mut buffer: BufferReader) -> str[2] {
+        let data = buffer.read_bytes(2);
+        asm(s: data.ptr()) {
+            s: str[2]
+        }
+    }
+}
+
 impl AbiDecode for str[3] {
     fn abi_decode(ref mut buffer: BufferReader) -> str[3] {
         let data = buffer.read_bytes(3);
         asm(s: data.ptr()) {
             s: str[3]
+        }
+    }
+}
+
+impl AbiDecode for str[4] {
+    fn abi_decode(ref mut buffer: BufferReader) -> str[4] {
+        let data = buffer.read_bytes(4);
+        asm(s: data.ptr()) {
+            s: str[4]
+        }
+    }
+}
+
+impl AbiDecode for str[5] {
+    fn abi_decode(ref mut buffer: BufferReader) -> str[5] {
+        let data = buffer.read_bytes(5);
+        asm(s: data.ptr()) {
+            s: str[5]
         }
     }
 }
@@ -654,6 +696,19 @@ where
     }
 }
 
+impl<T> AbiDecode for [T; 3]
+where
+    T: AbiDecode
+{
+    fn abi_decode(ref mut buffer: BufferReader) -> [T; 3] {
+        [
+            T::abi_decode(buffer),
+            T::abi_decode(buffer),
+            T::abi_decode(buffer)
+        ]
+    }
+}
+
 impl AbiDecode for () {
     fn abi_decode(ref mut _buffer: BufferReader) -> () {
         ()
@@ -679,6 +734,20 @@ where
         let a = A::abi_decode(buffer);
         let b = B::abi_decode(buffer);
         (a, b)
+    }
+}
+
+impl<A, B, C> AbiDecode for (A, B, C) 
+where
+    A: AbiDecode,
+    B: AbiDecode,
+    C: AbiDecode,
+{
+    fn abi_decode(ref mut buffer: BufferReader) -> (A, B, C) {
+        let a = A::abi_decode(buffer);
+        let b = B::abi_decode(buffer);
+        let c = C::abi_decode(buffer);
+        (a, b, c)
     }
 }
 
