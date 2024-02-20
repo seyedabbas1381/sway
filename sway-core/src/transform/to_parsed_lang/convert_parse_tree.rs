@@ -497,10 +497,10 @@ fn item_fn_to_function_declaration(
             }
         }
     };
-    let kind = if item_fn.fn_signature.name.as_str() == "main" {
-        FunctionDeclarationKind::Entry
-    } else {
-        FunctionDeclarationKind::Default
+
+    let kind = match (context.experimental.new_encoding, item_fn.fn_signature.name.as_str() == "main") {
+        (false, true) => FunctionDeclarationKind::Entry,
+        _ => FunctionDeclarationKind::Default,
     };
 
     let fn_decl = FunctionDeclaration {

@@ -2,7 +2,7 @@
 library;
 
 use ::{alloc::{alloc_bytes, realloc_bytes}, vec::Vec};
-use ::assert::assert;
+use ::assert::{assert, assert_eq};
 use ::intrinsics::size_of_val;
 use ::option::Option::{self, *};
 use ::convert::{From, Into, *};
@@ -875,6 +875,20 @@ impl AbiEncode for Bytes {
     }
 }
 
+impl AbiDecode for Bytes {
+    fn abi_decode(ref mut buffer: BufferReader) -> Bytes {
+        let len = u64::abi_decode(buffer);
+        let data = buffer.read_bytes(len);
+        Bytes {
+            buf: RawBytes {
+                ptr: data.ptr(),
+                cap: len,
+            },
+            len,
+        }
+    }
+}
+
 // Tests
 //
 fn setup() -> (Bytes, u8, u8, u8) {
@@ -893,6 +907,7 @@ fn test_new_bytes() {
     let bytes = Bytes::new();
     assert(bytes.len() == 0);
 }
+
 #[test()]
 fn test_push() {
     let (_, a, b, c) = setup();
@@ -904,6 +919,7 @@ fn test_push() {
     bytes.push(c);
     assert(bytes.len() == 3);
 }
+
 #[test()]
 fn test_pop() {
     let (mut bytes, a, b, c) = setup();
@@ -943,11 +959,13 @@ fn test_pop() {
     assert(bytes.pop().is_none() == true);
     assert(bytes.len() == 0);
 }
+
 #[test()]
 fn test_len() {
     let (mut bytes, _, _, _) = setup();
     assert(bytes.len() == 3);
 }
+
 #[test()]
 fn test_clear() {
     let (mut bytes, _, _, _) = setup();
@@ -957,6 +975,7 @@ fn test_clear() {
 
     assert(bytes.len() == 0);
 }
+
 #[test()]
 fn test_packing() {
     let mut bytes = Bytes::new();
@@ -1310,4 +1329,13 @@ fn test_into_b256() {
     let expected: b256 = 0x3333333333333333333333333333333333333333333333333333333333333333;
 
     assert(value == expected);
+}
+
+#[test]
+pub fn test_encode_decode() {
+    let initial = 0x3333333333333333333333333333333333333333333333333333333333333333;
+    let initial: Bytes = Bytes::from(initial);
+    let decoded = abi_decode::<Bytes>(encode(initial));
+
+    assert_eq(decoded, initial);
 }

@@ -466,7 +466,8 @@ pub(crate) fn type_check_method_application(
         );
         let mut expr = TyExpression::type_check(handler, ctx.by_ref(), contract_call)?;
 
-        // We need to "fix" contract_id here because it was generated with zero
+        // We need to "fix" contract_id here because it was created with zero
+        // given that we only have access to it after type_checking the contract caller
         match &mut expr.expression {
             ty::TyExpressionVariant::FunctionApplication { arguments, .. } => {
                 arguments[0].1 = (*selector.unwrap().contract_address).clone()

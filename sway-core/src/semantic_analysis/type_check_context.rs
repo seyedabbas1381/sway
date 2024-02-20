@@ -1616,7 +1616,8 @@ impl<'a> TypeCheckContext<'a> {
     ) -> bool {
         let handler = Handler::default();
 
-        self.namespace
+        self
+            .namespace
             .module_mut()
             .current_items_mut()
             .implemented_traits

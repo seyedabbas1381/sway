@@ -134,9 +134,7 @@ fn arguments_type(engines: &Engines, decl: &TyFunctionDecl) -> Option<TypeArgume
     let types = decl
         .parameters
         .iter()
-        .map(|p| {
-            p.type_argument.clone()
-        })
+        .map(|p| p.type_argument.clone())
         .collect();
     let type_id = engines.te().insert(engines, TypeInfo::Tuple(types), None);
     Some(TypeArgument {
@@ -170,7 +168,7 @@ fn gen_entry_fn(
     root: &mut TyModule,
     purity: Purity,
     contents: Vec<AstNode>,
-    unit_type_id: TypeId,
+    return_type_id: TypeId,
 ) -> Result<(), ErrorEmitted> {
     let entry_fn_decl = crate::language::parsed::function::FunctionDeclaration {
         purity,
@@ -178,14 +176,14 @@ fn gen_entry_fn(
         name: Ident::new_no_span("__entry".to_string()),
         visibility: crate::language::Visibility::Public,
         body: CodeBlock {
-            contents,
+            contents: contents.clone(),
             whole_block_span: Span::dummy(),
         },
         parameters: vec![],
         span: Span::dummy(),
         return_type: TypeArgument {
-            type_id: unit_type_id,
-            initial_type_id: unit_type_id,
+            type_id: return_type_id,
+            initial_type_id: return_type_id,
             span: Span::dummy(),
             call_path_tree: None,
         },
@@ -250,10 +248,28 @@ impl TyProgram {
                 });
 
             let unit_type_id = engines.te().insert(engines, TypeInfo::Tuple(vec![]), None);
+            let bool_type_id = engines.te().insert(engines, TypeInfo::Boolean, None);
             let string_slice_type_id = engines.te().insert(engines, TypeInfo::StringSlice, None);
 
             match &parsed.kind {
-                TreeType::Predicate => {}
+                TreeType::Predicate => {
+                    let main_decl = main_decl.unwrap();
+                    let result_name = Ident::new_no_span("result".into());
+
+                    let mut contents = vec![];
+                    let arguments = AstNode::push_decode_script_data_as_fn_args(
+                        engines,
+                        &mut contents,
+                        result_name.clone(),
+                        &main_decl,
+                    );
+                    contents.push(AstNode::return_expr(Expression::call_function_with_suffix(
+                        Ident::new_no_span("main".into()),
+                        arguments,
+                    )));
+
+                    gen_entry_fn(&mut ctx, &mut root, Purity::Pure, contents, bool_type_id)?;
+                }
                 TreeType::Script => {
                     let main_decl = main_decl.unwrap();
                     let result_name = Ident::new_no_span("result".into());

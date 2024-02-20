@@ -48,7 +48,7 @@ pub struct AstNode {
 }
 
 impl AstNode {
-    pub fn return_node(value: Expression) -> AstNode {
+    pub fn return_expr(value: Expression) -> AstNode {
         AstNode {
             content: AstNodeContent::Expression(Expression {
                 kind: ExpressionKind::Return(Box::new(value)),

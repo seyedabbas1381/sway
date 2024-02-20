@@ -219,7 +219,7 @@ impl TyAstNode {
                         ..
                     } => {
                         let decl = decl_engine.get_function(decl_id);
-                        decl.is_entry()
+                        decl.is_entry_or_test()
                     }
                     _ => false,
                 }

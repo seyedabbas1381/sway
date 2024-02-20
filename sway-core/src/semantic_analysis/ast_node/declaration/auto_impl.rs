@@ -98,7 +98,7 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
         let type_parameters =
             self.duplicate_type_parameters_with_extra_constraint(type_parameters, "AbiDecode");
         let (implementing_for_type_id, implementing_for) =
-            self.build_implementing_for_with_type_parameters(suffix, &type_parameters);
+            self.build_implementing_for_with_type_parameters(suffix.clone(), &type_parameters);
 
         let fn_abi_decode_trait_item = FunctionDeclaration {
             purity: crate::language::Purity::Pure,
@@ -455,19 +455,18 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
         // skip module "core"
         // Because of ordering, we cannot guarantee auto impl
         // for structs inside "core"
-        if matches!(self.ctx.namespace.root().module.name.as_ref(), Some(x) if x.as_str() == "core")
-        {
+        if matches!(self.ctx.namespace.root().module.name.as_ref(), Some(x) if x.as_str() == "core") {
             return (false, false);
         }
 
         let Some(decl_ref) = decl.get_struct_decl_ref() else {
             return (false, false);
         };
-        let struct_ref = self.ctx.engines().de().get(decl_ref.id());
+        let struct_decl = self.ctx.engines().de().get(decl_ref.id());
 
         // Do not support types with generic constraints
         // because this generates a circular impl trait
-        if struct_ref.type_parameters.iter().any(|x| {
+        if struct_decl.type_parameters.iter().any(|x| {
             x.trait_constraints
                 .iter()
                 .any(|c| !c.type_arguments.is_empty())
@@ -475,7 +474,7 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
             return (false, false);
         }
 
-        let all_fields_are_abi_encode = struct_ref.fields.iter().all(|field| {
+        let all_fields_are_abi_encode = struct_decl.fields.iter().all(|field| {
             if let TypeInfo::UnknownGeneric { .. } =
                 &*self.ctx.engines().te().get(field.type_argument.type_id)
             {
@@ -491,7 +490,7 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
             )
         });
 
-        let all_fields_are_abi_decode = struct_ref.fields.iter().all(|field| {
+        let all_fields_are_abi_decode = struct_decl.fields.iter().all(|field| {
             if let TypeInfo::UnknownGeneric { .. } =
                 &*self.ctx.engines().te().get(field.type_argument.type_id)
             {
@@ -557,7 +556,7 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
             })
             .collect();
 
-        let abi_decode_contents = vec![AstNode::return_node(Expression {
+        let abi_decode_contents = vec![AstNode::return_expr(Expression {
             kind: ExpressionKind::Struct(Box::new(StructExpression {
                 call_path_binding: TypeBinding {
                     inner: CallPath {
@@ -863,7 +862,7 @@ impl<'a, 'b> AutoImplAbiEncodeContext<'a, 'b> {
                 ),
                 false,
             ),
-            AstNode::return_node(Expression::match_branch(
+            AstNode::return_expr(Expression::match_branch(
                 Expression::ambiguous_variable_expression(decode_result),
                 enum_decl
                     .variants

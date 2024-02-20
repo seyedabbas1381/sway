@@ -529,6 +529,14 @@ where
     buffer.as_raw_slice()
 }
 
+pub fn abi_decode<T>(data: raw_slice) -> T
+where
+    T: AbiDecode
+{
+    let mut buffer = BufferReader::from_parts(data.ptr(), data.len::<u8>());
+    T::abi_decode(buffer)
+}
+
 fn assert_encoding<T, SLICE>(value: T, expected: SLICE)
 where
     T: AbiEncode,
