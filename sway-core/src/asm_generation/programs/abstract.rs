@@ -153,7 +153,6 @@ impl AbstractProgram {
 
     // WHen the new encoding is used, jumps to the `__entry`  function
     fn build_jump_to_entry(&mut self, asm_buf: &mut AllocatedAbstractInstructionSet,) {
-        dbg!(self.entries.len());
         let entry = self.entries.iter().find(|x| x.name == "__entry").unwrap();
         asm_buf.ops.push(AllocatedAbstractOp {
             opcode: Either::Right(ControlFlowOp::Jump(entry.label)),

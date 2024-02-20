@@ -759,6 +759,36 @@ where
     }
 }
 
+impl<A, B, C, D, E, F, G, H, I, J, K> AbiDecode for (A, B, C, D, E, F, G, H, I, J, K) 
+where
+    A: AbiDecode,
+    B: AbiDecode,
+    C: AbiDecode,
+    D: AbiDecode,
+    E: AbiDecode,
+    F: AbiDecode,
+    G: AbiDecode,
+    H: AbiDecode,
+    I: AbiDecode,
+    J: AbiDecode,
+    K: AbiDecode,
+{
+    fn abi_decode(ref mut buffer: BufferReader) -> (A, B, C, D, E, F, G, H, I, J, K) {
+        let a = A::abi_decode(buffer);
+        let b = B::abi_decode(buffer);
+        let c = C::abi_decode(buffer);
+        let d = D::abi_decode(buffer);
+        let e = E::abi_decode(buffer);
+        let f = F::abi_decode(buffer);
+        let g = G::abi_decode(buffer);
+        let h = H::abi_decode(buffer);
+        let i = I::abi_decode(buffer);
+        let j = J::abi_decode(buffer);
+        let k = K::abi_decode(buffer);
+        (a, b, c, d, e, f, g, h, i, j, k)
+    }
+}
+
 
 #[test]
 fn ok_encode() {
